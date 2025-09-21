@@ -1,7 +1,7 @@
 _G.Config = { UserID = "0e35e6a5-2a11-4ec5-9231-be35ff60f79b", discord_id = "1002768543592501348", Note = "123" }
 loadstring(game:HttpGet("https://raw.githubusercontent.com/skadidau/yummytrack/main/tracker", true))()
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))() 
 
 setfpscap(3)
 
@@ -24,13 +24,12 @@ getgenv().bgsInfConfig = {
     PURCHASE_STARSHOP_SLOT = 14,
     MASTERY_BUFFS_LEVEL = 20,
 
-
     USE_ROYAL_KEY = false,
     USE_SUPER_KEY = false,
     USE_DICE_KEY = false,
     USE_MYSTERY_BOX = false,
 
-    IGNORE_STARTER_HATCH = true
+    IGNORE_STARTER_HATCH = true,
     AUTO_BOUNTY_RIFT = true,
     MIN_RIFT_MULTIPLIER = 25,
     RIFT_EGGS = {"Neon Egg"},
@@ -40,7 +39,6 @@ getgenv().bgsInfConfig = {
     ALWAYS_SECRET_ELIXIR = true,
     IGNORE_MYSTERY_BOX_GEM_CAP = true,
     IGNORE_EQUIP_BEST_PET = false,
-
 
 
     WEBHOOK_URL = "",
