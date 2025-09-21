@@ -1,6 +1,8 @@
 _G.Config = { UserID = "0e35e6a5-2a11-4ec5-9231-be35ff60f79b", discord_id = "1002768543592501348", Note = "123" }
 loadstring(game:HttpGet("https://raw.githubusercontent.com/skadidau/yummytrack/main/tracker", true))()
 
+loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
+
 setfpscap(3)
 
 getgenv().bgsInfConfig = {
@@ -28,6 +30,7 @@ getgenv().bgsInfConfig = {
     USE_DICE_KEY = false,
     USE_MYSTERY_BOX = false,
 
+    IGNORE_STARTER_HATCH = true
     AUTO_BOUNTY_RIFT = true,
     MIN_RIFT_MULTIPLIER = 25,
     RIFT_EGGS = {"Neon Egg"},
