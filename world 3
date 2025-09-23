@@ -1,2 +1,1 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
 loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/autofish"))()
