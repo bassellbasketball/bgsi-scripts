@@ -1,3 +1,0 @@
-KEEP_RARITIES = {"Secret", "Infinity"}
-AUTO_DELETE = true
-loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/main/riftfinder"))()
