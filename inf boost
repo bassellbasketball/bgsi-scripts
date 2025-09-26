@@ -65,11 +65,13 @@ local function teleportToChest()
     return false
 end
 
-local function spamR()
+local function spamRE()
     while true do
         if getChest() then
             VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
             VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
+            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
         else
             break
         end
@@ -90,7 +92,7 @@ while true do
 
     if getChest() then  
         if teleportToChest() then
-            spamR()
+            spamRE()
         end
     end
   
