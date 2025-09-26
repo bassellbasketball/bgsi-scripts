@@ -1,100 +1,25 @@
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local screenSize = workspace.CurrentCamera.ViewportSize
+local touchPosition = Vector2.new(screenSize.X / 2, screenSize.Y / 2)
 
-local lastSummonTime = 0
-local COOLDOWN_DURATION = 30 * 60
-
-local teleportArgs = {
+local args = {
     "WorldTeleport",
     "Minigame Paradise"
 }
+game:GetService("ReplicatedStorage"):WaitForChild("Shared")
+    :WaitForChild("Framework")
+    :WaitForChild("Network")
+    :WaitForChild("Remote")
+    :WaitForChild("RemoteEvent")
+    :FireServer(unpack(args))
 
-local summonArgs = {
-    "SummonRift",
-    {
-        Name = "dice-rift",
-        Type = "Chest",
-        Time = 5,
-        World = "Minigame Paradise"
-    }
-}
+loadstring(game:HttpGet("https://raw.githubusercontent.com/IdiotHub/Scripts/refs/heads/main/BGSI/AutoClaw.lua"))()
 
-local function teleportToWorld()
-    ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent"):FireServer(unpack(teleportArgs))
-end
-
-local function executeSummon()
-    if os.time() - lastSummonTime < COOLDOWN_DURATION then
-        return false
-    end
-    
-    local success = pcall(function()
-        ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(summonArgs))
-    end)
-    
-    if success then
-        lastSummonTime = os.time()
-        return true
-    end
-    return false
-end
-
-local function getChest()
-    return workspace:FindFirstChild("Rendered")
-    and workspace.Rendered:FindFirstChild("Rifts")
-    and workspace.Rendered.Rifts:FindFirstChild("dice-rift")
-    and workspace.Rendered.Rifts["dice-rift"]:FindFirstChild("Chest")
-    and workspace.Rendered.Rifts["dice-rift"].Chest:FindFirstChild("dice-rift")
-end
-
-local function teleportToChest()
-    local character = LocalPlayer.Character
-    if not character then
-        character = LocalPlayer.CharacterAdded:Wait()
-    end
-    
-    local hrp = character:WaitForChild("HumanoidRootPart")
-    local chest = getChest()
-
-    if chest then  
-        hrp.CFrame = chest.CFrame * CFrame.new(0, 0, 5)
-        return true  
-    end  
-    return false
-end
-
-local function spamRE()
+task.spawn(function()
     while true do
-        if getChest() then
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.R, false, game)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.R, false, game)
-            VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-            VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-        else
-            break
-        end
-        wait(0.1)
+        VirtualInputManager:SendMouseButtonEvent(touchPosition.X, touchPosition.Y, 0, true, game, 1)
+        task.wait()
+        VirtualInputManager:SendMouseButtonEvent(touchPosition.X, touchPosition.Y, 0, false, game, 1)
+        task.wait(60)
     end
-end
-
-teleportToWorld()
-wait(3)
-
-while true do
-    if not getChest() then
-        local summoned = executeSummon()
-        if summoned then
-            wait(3)
-        end
-    end
-
-    if getChest() then  
-        if teleportToChest() then
-            spamRE()
-        end
-    end
-  
-    wait(5)
-end
+end)
