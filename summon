@@ -1,5 +1,5 @@
 RIFT_EGG = "Crystal Egg"
-AUTO_SUMMON = true
+AUTO_SUMMON = false
 LUCKY_DELAY = 30
 LUCKY_TIER = 7
 SPEED_DELAY = 30
