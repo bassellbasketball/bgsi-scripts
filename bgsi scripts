@@ -30,7 +30,7 @@ getgenv().bgsInfConfig = {
     MAX_LEGENDARY_TIER_TO_DELETE = 3,
     DELETE_LEGENDARY_SHINY = true,
     DELETE_LEGENDARY_MYTHIC = true,
-    PETS_TO_DELETE = {"Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem"},
+    PETS_TO_DELETE = {"Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem", "Emerald Golem"},
 
     IGNORE_STARTER_HATCH = true,
     AUTO_BOUNTY_RIFT = true,
