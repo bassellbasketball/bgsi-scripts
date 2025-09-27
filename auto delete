@@ -1,0 +1,35 @@
+local function getTeamPetIds()
+    local playerData = LocalData:Get()
+    if not playerData then return {} end
+    local equippedTeamIndex = playerData.TeamEquipped
+    if not equippedTeamIndex then return {} end
+    local equippedTeam = playerData.Teams and playerData.Teams[equippedTeamIndex]
+    if not equippedTeam or not equippedTeam.Pets then return {} end
+    return equippedTeam.Pets
+end
+
+local function autoDeletePets()
+    local teamPetIds = getTeamPetIds()
+    local data = LocalData:Get()
+    if data and data.Pets then
+        for _, pet in pairs(data.Pets) do
+            local isTeamPet = false
+            for _, teamPetId in ipairs(teamPetIds) do
+                if pet.Id == teamPetId then
+                    isTeamPet = true
+                    break
+                end
+            end
+            if not isTeamPet then
+                local petInfo = PetsModule[pet.Name]
+                if petInfo and petInfo.Rarity ~= "Secret" and petInfo.Rarity ~= "Infinity" then
+                    local amounts = {100000, 10000, 1000, 100, 10, 1}
+                    for _, amount in ipairs(amounts) do
+                        RemoteEvent:FireServer("DeletePet", pet.Id, amount, false)
+                        task.wait(0.01)
+                    end
+                end
+            end
+        end
+    end
+end
