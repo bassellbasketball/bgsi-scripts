@@ -34,10 +34,6 @@ getgenv().bgsInfConfig = {
     MIN_RIFT_MULTIPLIER = 25,
     RIFT_EGGS = {"Crystal Egg"},
     HATCH_1X_EGG = {"Crystal Egg"},
-    ALWAYS_INFINITY_ELIXIR = true,
-    ALWAYS_EGG_ELIXIR = true,
-    ALWAYS_SECRET_ELIXIR = true,
-    IGNORE_MYSTERY_BOX_GEM_CAP = true,
     IGNORE_EQUIP_BEST_PET = false,
 
 
