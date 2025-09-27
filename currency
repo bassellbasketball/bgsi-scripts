@@ -1,0 +1,8 @@
+TWEEN_TIME = 0.7
+WEBHOOK_URL = ""
+INTERVAL_CHECK = 10
+AUTO_SPIN_WHEEL = true
+AUTO_SPIN_EVERY = 600
+AUTO_AUTUMN_SHOP = false
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/leaf"))()
