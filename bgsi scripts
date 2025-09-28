@@ -1,2 +1,51 @@
-REMOVE_EGG_ANIMATION = true
-loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/leafegg"))()
+setfpscap(5)
+
+getgenv().bgsInfConfig = {
+    ADD_FRIEND = true,
+    AUTO_UPDATE_RESTART = false,
+    IGNORE_MINIGAME = true,
+    GIVE_BUBBLE_SHRINE = {"Tickets"},
+    MIN_GIVE_BUBBLE_SHRINE = 100,
+    IGNORE_SEASON_CHALLENGES = true,
+
+    PURCHASE_ALIENSHOP = true,
+    PURCHASE_BLACKMARKET = true,
+    PURCHASE_DICE_MERCHANT = true,
+    PURCHASE_TRAVELING_MERCHANT = true,
+    PURCHASE_STARSHOP_SLOT = 14,
+    RESTOCK_SHOP = "Festival Shop",
+    PURCHASE_STARSHOP_SLOT = 14,
+    MASTERY_BUFFS_LEVEL = 20,
+
+    USE_ROYAL_KEY = false,
+    USE_SUPER_KEY = false,
+    USE_DICE_KEY = false,
+    USE_MYSTERY_BOX = false,
+
+    RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
+    RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
+    MAX_LEGENDARY_TIER_TO_DELETE = 3,
+    DELETE_LEGENDARY_SHINY = true,
+    DELETE_LEGENDARY_MYTHIC = true,
+    PETS_TO_DELETE = {"Emerald Golem", "Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem"},
+
+    IGNORE_STARTER_HATCH = true,
+    AUTO_BOUNTY_RIFT = true,
+    MIN_RIFT_MULTIPLIER = 25,
+    RIFT_EGGS = {"Neon Egg"},
+    HATCH_1X_EGG = {"Neon Egg"},
+    ALWAYS_INFINITY_ELIXIR = true,
+    ALWAYS_EGG_ELIXIR = true,
+    ALWAYS_SECRET_ELIXIR = true,
+    IGNORE_MYSTERY_BOX_GEM_CAP = true,
+    IGNORE_EQUIP_BEST_PET = true,
+
+
+    WEBHOOK_URL = "",
+    DISCORD_ID = "",
+    WEBHOOK_NOTE = "Secret Hatched!",
+    WEBHOOK_ODDS = "100m",
+    SHOW_PET_WEBHOOK_USERNAME = true,
+}
+
+loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/e1f274825da00b92599872de596f1fc0.lua"))()
