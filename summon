@@ -1,16 +1,26 @@
-RIFT_EGG = "Crystal Egg"
-AUTO_SUMMON = false
-LUCKY_DELAY = 30
-LUCKY_TIER = 7
-SPEED_DELAY = 30
-SPEED_TIER = 7
-MYTHIC_DELAY = 30
-MYTHIC_TIER = 7
-COINS_DELAY = 30
-COINS_TIER = 7
-TICKETS_DELAY = 30
-TICKETS_TIER = 7
-SECRET_ELIXIR_DELAY = 30
-EGG_ELIXIR_DELAY = 30
-INFINITY_ELIXIR_DELAY = 30
-loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/autodelete"))()
+local args = {
+    "SummonRift",
+    {
+        Type = "Egg",
+        Time = 5,
+        Name = "Neon Egg",
+        Luck = 5,
+        World = "Minigame Paradise"
+    }
+}
+
+local function executeSummon()
+    local success, err = pcall(function()
+        game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
+    end)
+    if not success then
+        warn("Error executing summon: " .. tostring(err))
+    end
+end
+
+executeSummon()
+
+while true do
+    wait(1800)
+    executeSummon()
+end
