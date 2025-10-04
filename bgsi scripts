@@ -21,7 +21,7 @@ task.spawn(function()
     end
 end)
 
-local difficulties = {"Easy","Medium","Hard","Insane"}
+local difficulties = {"Insane"}
 
 task.spawn(function()
     while true do
