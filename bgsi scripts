@@ -1,5 +1,5 @@
 AUTO_SPIN_WHEEL = true
-AUTO_SPIN_EVERY = 0.05
+AUTO_SPIN_EVERY = 0.01
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -7,7 +7,7 @@ local function spinWheel()
     local rf = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteFunction
     local re = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteEvent
     rf:InvokeServer("AutumnWheelSpin")
-    task.wait(0.5)
+    task.wait(0.01)
     re:FireServer("ClaimAutumnWheelSpinQueue")
 end
 
