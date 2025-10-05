@@ -1,5 +1,5 @@
 AUTO_SPIN_WHEEL = true
-AUTO_SPIN_EVERY = .001
+AUTO_SPIN_EVERY = 0.05
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
