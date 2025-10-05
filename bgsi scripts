@@ -1,15 +1,19 @@
 AUTO_SPIN_WHEEL = true
+AUTO_SPIN_EVERY = 0.0005
 
-local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local rf = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteFunction
-local re = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteEvent
 
-RunService.Heartbeat:Connect(function()
-    if AUTO_SPIN_WHEEL then
-        pcall(function()
-            rf:InvokeServer("AutumnWheelSpin")
-            re:FireServer("ClaimAutumnWheelSpinQueue")
-        end)
+local function spinWheel()
+    local rf = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteFunction
+    local re = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteEvent
+    rf:InvokeServer("AutumnWheelSpin")
+    task.wait(0.0005)
+    re:FireServer("ClaimAutumnWheelSpinQueue")
+end
+
+task.spawn(function()
+    while AUTO_SPIN_WHEEL do
+        spinWheel()
+        task.wait(AUTO_SPIN_EVERY)
     end
-end) 
+end)
