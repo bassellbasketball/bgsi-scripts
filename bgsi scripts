@@ -35,10 +35,10 @@ end
 
 while true do
     useMysteryBox()
-    task.wait(0.1)
+    task.wait(0.5)
     local currentGifts = findCurrentGiftIDs()
     for _, giftID in pairs(currentGifts) do
         claimGift(giftID)
     end
-    task.wait(0.1)
+    task.wait(0.5)
 end
