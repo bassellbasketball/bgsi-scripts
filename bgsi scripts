@@ -33,8 +33,8 @@ end)
 task.spawn(function()
     while true do
         remote:FireServer("SkipMinigameCooldown","Corn Maze")
-        remote:FireServer("StartMinigame","Corn Maze","Hard")
-        remote:FireServer("StartMinigame","Corn Maze","Hard")
+        remote:FireServer("StartMinigame","Corn Maze","Insane")
+        remote:FireServer("StartMinigame","Corn Maze","Insane")
         task.wait(0.5)
     end
 end)
