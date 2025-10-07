@@ -6,9 +6,6 @@ local potions = {
     {"Lucky", 1}, {"Lucky", 2}, {"Lucky", 3},
     {"Mythic", 1}, {"Mythic", 2}, {"Mythic", 3},
     {"Tickets", 1}, {"Tickets", 2}, {"Tickets", 3},
-    {"Infinity Elixir", 1},
-    {"Egg Elixir", 1},
-    {"Secret Elixir", 1}
 }
 
 local RunService = game:GetService("RunService")
