@@ -1,10 +1,10 @@
 getgenv().running = not getgenv().running
 
 local potions = {
-    {"Coins", 7},
-    {"Speed", 7},
-    {"Lucky", 7},
-    {"Mythic", 7},
+    {"Coins", 6}, {"Coins", 7},
+    {"Speed", 6}, {"Speed", 7},
+    {"Lucky", 6}, {"Lucky", 7},
+    {"Mythic", 6}, {"Mythic", 7},
     {"Infinity Elixir", 1},
     {"Egg Elixir", 1},
     {"Secret Elixir", 1}
