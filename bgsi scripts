@@ -1,11 +1,13 @@
 getgenv().running = not getgenv().running
 
 local potions = {
-    {"Coins", 1}, {"Coins", 2}, {"Coins", 3},
-    {"Speed", 1}, {"Speed", 2}, {"Speed", 3},
-    {"Lucky", 1}, {"Lucky", 2}, {"Lucky", 3},
-    {"Mythic", 1}, {"Mythic", 2}, {"Mythic", 3},
-    {"Tickets", 1}, {"Tickets", 2}, {"Tickets", 3},
+    {"Coins", 7},
+    {"Speed", 7},
+    {"Lucky", 7},
+    {"Mythic", 7},
+    {"Infinity Elixir", 1},
+    {"Egg Elixir", 1},
+    {"Secret Elixir", 1}
 }
 
 local RunService = game:GetService("RunService")
