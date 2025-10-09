@@ -33,12 +33,15 @@ local function claimGift(giftID)
     RemoteEvent:FireServer(unpack(args))
 end
 
-while true do
-    useMysteryBox()
-    task.wait(0.5)
-    local currentGifts = findCurrentGiftIDs()
-    for _, giftID in pairs(currentGifts) do
-        claimGift(giftID)
+local last = 0
+RunService.Heartbeat:Connect(function(step)
+    last += step
+    if last >= 0.5 then
+        useMysteryBox()
+        local currentGifts = findCurrentGiftIDs()
+        for _, giftID in pairs(currentGifts) do
+            claimGift(giftID)
+        end
+        last = 0
     end
-    task.wait(0.5)
-end
+end)
