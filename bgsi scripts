@@ -1,1 +1,23 @@
 loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/cartoonegg"))()
+
+task.spawn(function()
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
+end)
+
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Camera = workspace.CurrentCamera
+local Players = game:GetService("Players")
+
+task.spawn(function()
+    while task.wait(60) do
+        local centerX = Camera.ViewportSize.X / 2
+        local centerY = Camera.ViewportSize.Y / 2
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
+        task.wait()
+        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
+    end
+end)
+
+for _, x in pairs(getconnections(Players.LocalPlayer.Idled)) do
+    x:Disable()
+end
