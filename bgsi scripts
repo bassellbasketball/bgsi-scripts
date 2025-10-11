@@ -3,7 +3,6 @@ local Workspace = game:GetService("Workspace")
 local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
 
 local RemoteEvent = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent")
 
@@ -32,18 +31,6 @@ end
 local function claimGift(giftID)
     local args = {"ClaimGift", giftID}
     RemoteEvent:FireServer(unpack(args))
-end
-
-task.spawn(function()
-    while true do
-        VirtualUser:Button1Down(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
-        VirtualUser:Button1Up(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
-        task.wait(30)
-    end
-end)
-
-for _, x in pairs(getconnections(Players.LocalPlayer.Idled)) do
-    x:Disable()
 end
 
 while true do
