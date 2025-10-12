@@ -6,27 +6,35 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local player = Players.LocalPlayer
 local VirtualInputManager = game:GetService("VirtualInputManager")
+local RunService = game:GetService("RunService")
 
-local remote = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent")
+local remote = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteEvent
+local rf = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteFunction
+local re = ReplicatedStorage.Shared.Framework.Network.Remote.RemoteEvent
 
-for _, x in pairs(getconnections(game.Players.LocalPlayer.Idled)) do 
+for _, x in pairs(getconnections(Players.LocalPlayer.Idled)) do 
     x:Disable() 
 end
 
-task.spawn(function()
-    while true do
-        remote:FireServer("FinishMinigame")
-        task.wait(0.2)
+AUTO_SPIN_WHEEL = true
+
+RunService.Heartbeat:Connect(function()
+    if AUTO_SPIN_WHEEL then
+        pcall(function()
+            rf:InvokeServer("AutumnWheelSpin")
+            re:FireServer("ClaimAutumnWheelSpinQueue")
+        end)
     end
 end)
 
-task.spawn(function()
-    while true do
-        remote:FireServer("SkipMinigameCooldown","Corn Maze")
-        remote:FireServer("StartMinigame","Corn Maze","Insane")
-        remote:FireServer("StartMinigame","Corn Maze","Insane")
-        task.wait(0.5)
-    end
+RunService.Heartbeat:Connect(function()
+    remote:FireServer("FinishMinigame")
+end)
+
+RunService.Heartbeat:Connect(function()
+    remote:FireServer("SkipMinigameCooldown","Corn Maze")
+    remote:FireServer("StartMinigame","Corn Maze","Insane")
+    remote:FireServer("StartMinigame","Corn Maze","Insane")
 end)
 
 task.spawn(function()
@@ -41,4 +49,4 @@ task.spawn(function()
             task.wait(0.05)
         end
     end
-end)
+end) 
