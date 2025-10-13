@@ -1,23 +1,57 @@
-loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/cartoonegg"))()
-
-task.spawn(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
-end)
-
-local VirtualInputManager = game:GetService("VirtualInputManager")
-local Camera = workspace.CurrentCamera
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+
+local RemoteEvent = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent")
+
+local notificationSettings = {"SetSetting", "Item Notifications", false}
+RemoteEvent:FireServer(unpack(notificationSettings))
+
+local function useMysteryBox()
+    local args = {"UseGift", "Fall Mystery Box", 25}
+    RemoteEvent:FireServer(unpack(args))
+end
+
+local function findCurrentGiftIDs()
+    local rendered = Workspace:FindFirstChild("Rendered")
+    if not rendered then return {} end
+    local giftsFolder = rendered:FindFirstChild("Gifts")
+    if not giftsFolder then return {} end
+    local currentIDs = {}
+    for _, gift in pairs(giftsFolder:GetChildren()) do
+        if gift:IsA("Model") or gift:IsA("Part") then
+            table.insert(currentIDs, gift.Name)
+        end
+    end
+    return currentIDs
+end
+
+local function claimGift(giftID)
+    local args = {"ClaimGift", giftID}
+    RemoteEvent:FireServer(unpack(args))
+end
 
 task.spawn(function()
-    while task.wait(60) do
-        local centerX = Camera.ViewportSize.X / 2
-        local centerY = Camera.ViewportSize.Y / 2
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 0)
-        task.wait()
-        VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 0)
+    while true do
+        VirtualUser:Button1Down(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
+        VirtualUser:Button1Up(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
+        task.wait(30)
     end
 end)
 
 for _, x in pairs(getconnections(Players.LocalPlayer.Idled)) do
     x:Disable()
 end
+
+while true do
+    useMysteryBox()
+    task.wait(0.5)
+    local currentGifts = findCurrentGiftIDs()
+    for _, giftID in pairs(currentGifts) do
+        claimGift(giftID)
+    end
+    task.wait(0.5)
+end 
