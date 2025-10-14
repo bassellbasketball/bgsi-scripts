@@ -1,48 +1,57 @@
-require(game:GetService("ReplicatedStorage").Client.Effects.HatchEgg).Play = function() return end
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local StarterGui = game:GetService("StarterGui")
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local VirtualUser = game:GetService("VirtualUser")
+
 local RemoteEvent = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent")
-local LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
-local args1 = {"HatchPowerupEgg", "Season 7 Egg", 6}
-local delete1 = {"ToggleAutoDelete", "Virtual Entity"}
-local delete2 = {"ToggleAutoDelete", "Virtual Bat"}
-RemoteEvent:FireServer(unpack(delete1))
-RemoteEvent:FireServer(unpack(delete2))
-wait(1)
-local PETS_TO_DELETE = {
-    ["Stellar Entity"] = true,
-    ["Moonchanter"] = true,
-}
-local DELETE_COUNTS = {100, 10, 1}
-local function shouldDelete(pet)
-    return PETS_TO_DELETE[pet.Name] == true
-end
-local function deletePetsLoop()
-    while true do
-        local data = LocalData:Get()
-        if data and data.Pets then
-            local petsToDelete = {}
-            for _, pet in pairs(data.Pets) do
-                if pet.Id and shouldDelete(pet) then
-                    table.insert(petsToDelete, pet)
-                end
-            end
-            for _, pet in ipairs(petsToDelete) do
-                for _, count in ipairs(DELETE_COUNTS) do
-                    RemoteEvent:FireServer("DeletePet", pet.Id, count, false)
-                    task.wait(0.05)
-                end
-                task.wait(0.1)
-            end
-        end
-        task.wait(5)
-    end
-end
-task.spawn(deletePetsLoop)
-while true do
-    RemoteEvent:FireServer(unpack(args1))
-    wait(0.5)
+
+local notificationSettings = {"SetSetting", "Item Notifications", false}
+RemoteEvent:FireServer(unpack(notificationSettings))
+
+local function useMysteryBox()
+    local args = {"UseGift", "Fall Mystery Box", 25}
+    RemoteEvent:FireServer(unpack(args))
 end
 
-task.spawn(function()  
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()  
+local function findCurrentGiftIDs()
+    local rendered = Workspace:FindFirstChild("Rendered")
+    if not rendered then return {} end
+    local giftsFolder = rendered:FindFirstChild("Gifts")
+    if not giftsFolder then return {} end
+    local currentIDs = {}
+    for _, gift in pairs(giftsFolder:GetChildren()) do
+        if gift:IsA("Model") or gift:IsA("Part") then
+            table.insert(currentIDs, gift.Name)
+        end
+    end
+    return currentIDs
+end
+
+local function claimGift(giftID)
+    local args = {"ClaimGift", giftID}
+    RemoteEvent:FireServer(unpack(args))
+end
+
+task.spawn(function()
+    while true do
+        VirtualUser:Button1Down(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
+        VirtualUser:Button1Up(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
+        task.wait(30)
+    end
 end)
+
+for _, x in pairs(getconnections(Players.LocalPlayer.Idled)) do
+    x:Disable()
+end
+
+while true do
+    useMysteryBox()
+    task.wait(0.5)
+    local currentGifts = findCurrentGiftIDs()
+    for _, giftID in pairs(currentGifts) do
+        claimGift(giftID)
+    end
+    task.wait(0.5)
+end 
