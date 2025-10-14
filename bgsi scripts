@@ -1,44 +1,48 @@
-task.spawn(function()
-    loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
-end)
-
-local Players = game:GetService("Players")
+require(game:GetService("ReplicatedStorage").Client.Effects.HatchEgg).Play = function() return end
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
-local VirtualInputManager = game:GetService("VirtualInputManager")
-
-local remote = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent")
-
-for _, x in pairs(getconnections(game.Players.LocalPlayer.Idled)) do 
-    x:Disable() 
+local RemoteEvent = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent")
+local LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
+local args1 = {"HatchPowerupEgg", "Season 7 Egg", 6}
+local delete1 = {"ToggleAutoDelete", "Virtual Entity"}
+local delete2 = {"ToggleAutoDelete", "Virtual Bat"}
+RemoteEvent:FireServer(unpack(delete1))
+RemoteEvent:FireServer(unpack(delete2))
+wait(1)
+local PETS_TO_DELETE = {
+    ["Stellar Entity"] = true,
+    ["Moonchanter"] = true,
+}
+local DELETE_COUNTS = {100, 10, 1}
+local function shouldDelete(pet)
+    return PETS_TO_DELETE[pet.Name] == true
+end
+local function deletePetsLoop()
+    while true do
+        local data = LocalData:Get()
+        if data and data.Pets then
+            local petsToDelete = {}
+            for _, pet in pairs(data.Pets) do
+                if pet.Id and shouldDelete(pet) then
+                    table.insert(petsToDelete, pet)
+                end
+            end
+            for _, pet in ipairs(petsToDelete) do
+                for _, count in ipairs(DELETE_COUNTS) do
+                    RemoteEvent:FireServer("DeletePet", pet.Id, count, false)
+                    task.wait(0.05)
+                end
+                task.wait(0.1)
+            end
+        end
+        task.wait(5)
+    end
+end
+task.spawn(deletePetsLoop)
+while true do
+    RemoteEvent:FireServer(unpack(args1))
+    wait(0.5)
 end
 
-task.spawn(function()
-    while true do
-        remote:FireServer("FinishMinigame")
-        task.wait(0.2)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        remote:FireServer("SkipMinigameCooldown","Corn Maze")
-        remote:FireServer("StartMinigame","Corn Maze","Insane")
-        remote:FireServer("StartMinigame","Corn Maze","Insane")
-        task.wait(0.5)
-    end
-end)
-
-task.spawn(function()
-    while true do
-        task.wait(60)
-        local screenSize = workspace.CurrentCamera.ViewportSize
-        local centerX = screenSize.X / 2
-        local centerY = screenSize.Y / 2
-        for i = 1, 10 do
-            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, true, game, 1)
-            VirtualInputManager:SendMouseButtonEvent(centerX, centerY, 0, false, game, 1)
-            task.wait(0.05)
-        end
-    end
+task.spawn(function()  
+    loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()  
 end)
