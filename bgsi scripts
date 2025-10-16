@@ -1,57 +1,51 @@
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Workspace = game:GetService("Workspace")
-local StarterGui = game:GetService("StarterGui")
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local VirtualUser = game:GetService("VirtualUser")
+setfpscap(5)
 
-local RemoteEvent = ReplicatedStorage:WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteEvent")
+getgenv().bgsInfConfig = {
+    ADD_FRIEND = true,
+    AUTO_UPDATE_RESTART = false,
+    IGNORE_MINIGAME = true,
+    GIVE_BUBBLE_SHRINE = {"Coins", "Tickets"},
+    MIN_GIVE_BUBBLE_SHRINE = 500,
+    IGNORE_SEASON_CHALLENGES = true,
 
-local notificationSettings = {"SetSetting", "Item Notifications", false}
-RemoteEvent:FireServer(unpack(notificationSettings))
+    PURCHASE_ALIENSHOP = true,
+    PURCHASE_BLACKMARKET = true,
+    PURCHASE_DICE_MERCHANT = true,
+    PURCHASE_TRAVELING_MERCHANT = true,
+    PURCHASE_STARSHOP_SLOT = 14,
+    RESTOCK_SHOP = "Festival Shop",
+    PURCHASE_STARSHOP_SLOT = 14,
+    MASTERY_BUFFS_LEVEL = 5,
 
-local function useMysteryBox()
-    local args = {"UseGift", "Fall Mystery Box", 25}
-    RemoteEvent:FireServer(unpack(args))
-end
+    USE_ROYAL_KEY = false,
+    USE_SUPER_KEY = false,
+    USE_DICE_KEY = false,
+    USE_MYSTERY_BOX = false,
 
-local function findCurrentGiftIDs()
-    local rendered = Workspace:FindFirstChild("Rendered")
-    if not rendered then return {} end
-    local giftsFolder = rendered:FindFirstChild("Gifts")
-    if not giftsFolder then return {} end
-    local currentIDs = {}
-    for _, gift in pairs(giftsFolder:GetChildren()) do
-        if gift:IsA("Model") or gift:IsA("Part") then
-            table.insert(currentIDs, gift.Name)
-        end
-    end
-    return currentIDs
-end
+    RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
+    RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
+    MAX_LEGENDARY_TIER_TO_DELETE = 3,
+    DELETE_LEGENDARY_SHINY = true,
+    DELETE_LEGENDARY_MYTHIC = true,
+    PETS_TO_DELETE = {"Emerald Golem", "Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem"},
 
-local function claimGift(giftID)
-    local args = {"ClaimGift", giftID}
-    RemoteEvent:FireServer(unpack(args))
-end
+    IGNORE_STARTER_HATCH = true,
+    AUTO_BOUNTY_RIFT = true,
+    MIN_RIFT_MULTIPLIER = 25,
+    RIFT_EGGS = {"Crystal Egg"},
+    HATCH_1X_EGG = {"Crystal Egg"},
+    ALWAYS_INFINITY_ELIXIR = true,
+    ALWAYS_EGG_ELIXIR = true,
+    ALWAYS_SECRET_ELIXIR = true,
+    IGNORE_MYSTERY_BOX_GEM_CAP = true,
+    IGNORE_EQUIP_BEST_PET = false,
 
-task.spawn(function()
-    while true do
-        VirtualUser:Button1Down(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
-        VirtualUser:Button1Up(Vector2.new(workspace.CurrentCamera.ViewportSize.X/2, workspace.CurrentCamera.ViewportSize.Y/2))
-        task.wait(30)
-    end
-end)
 
-for _, x in pairs(getconnections(Players.LocalPlayer.Idled)) do
-    x:Disable()
-end
+    WEBHOOK_URL = "",
+    DISCORD_ID = "",
+    WEBHOOK_NOTE = "Secret Hatched!",
+    WEBHOOK_ODDS = "100m",
+    SHOW_PET_WEBHOOK_USERNAME = true,
+}
 
-while true do
-    useMysteryBox()
-    task.wait(0.5)
-    local currentGifts = findCurrentGiftIDs()
-    for _, giftID in pairs(currentGifts) do
-        claimGift(giftID)
-    end
-    task.wait(0.5)
-end
+loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/e1f274825da00b92599872de596f1fc0.lua"))()
