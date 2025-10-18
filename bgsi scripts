@@ -1,51 +1,45 @@
-setfpscap(5)
+TRICK_OR_TREAT = true
+DELAY = 0.5
 
-getgenv().bgsInfConfig = {
-    ADD_FRIEND = true,
-    AUTO_UPDATE_RESTART = false,
-    IGNORE_MINIGAME = true,
-    GIVE_BUBBLE_SHRINE = {"Coins", "Tickets"},
-    MIN_GIVE_BUBBLE_SHRINE = 500,
-    IGNORE_SEASON_CHALLENGES = true,
+if TRICK_OR_TREAT then
+player = game.Players.LocalPlayer
+hrp = player.Character:WaitForChild("HumanoidRootPart")
 
-    PURCHASE_ALIENSHOP = true,
-    PURCHASE_BLACKMARKET = true,
-    PURCHASE_DICE_MERCHANT = true,
-    PURCHASE_TRAVELING_MERCHANT = true,
-    PURCHASE_STARSHOP_SLOT = 14,
-    RESTOCK_SHOP = "Festival Shop",
-    PURCHASE_STARSHOP_SLOT = 14,
-    MASTERY_BUFFS_LEVEL = 5,
-
-    USE_ROYAL_KEY = false,
-    USE_SUPER_KEY = false,
-    USE_DICE_KEY = false,
-    USE_MYSTERY_BOX = false,
-
-    RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
-    RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
-    MAX_LEGENDARY_TIER_TO_DELETE = 3,
-    DELETE_LEGENDARY_SHINY = true,
-    DELETE_LEGENDARY_MYTHIC = true,
-    PETS_TO_DELETE = {"Emerald Golem", "Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem"},
-
-    IGNORE_STARTER_HATCH = true,
-    AUTO_BOUNTY_RIFT = true,
-    MIN_RIFT_MULTIPLIER = 25,
-    RIFT_EGGS = {"Nightmare Egg"},
-    HATCH_1X_EGG = {"Nightmare Egg"},
-    ALWAYS_INFINITY_ELIXIR = true,
-    ALWAYS_EGG_ELIXIR = true,
-    ALWAYS_SECRET_ELIXIR = true,
-    IGNORE_MYSTERY_BOX_GEM_CAP = true,
-    IGNORE_EQUIP_BEST_PET = false,
-
-
-    WEBHOOK_URL = "",
-    DISCORD_ID = "",
-    WEBHOOK_NOTE = "Secret Hatched!",
-    WEBHOOK_ODDS = "100m",
-    SHOW_PET_WEBHOOK_USERNAME = true,
+locations = {
+    Vector3.new(-5033.50, 22.37, -619.40),
+    Vector3.new(-5052.92, 22.37, -596.65),
+    Vector3.new(-5036.97, 25.16, -550.20),
+    Vector3.new(-5058.79, 25.16, -555.47),
+    Vector3.new(-5079.90, 22.31, -686.93),
+    Vector3.new(-5053.41, 22.31, -698.50),
+    Vector3.new(-4984.23, 16.32, -685.97),
+    Vector3.new(-4962.21, 16.32, -692.00),
+    Vector3.new(-4888.24, 21.87, -489.50),
+    Vector3.new(-4890.34, 21.87, -468.01),
+    Vector3.new(-4935.93, 19.08, -452.81),
+    Vector3.new(-4964.18, 19.08, -460.37)
 }
 
-loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/e1f274825da00b92599872de596f1fc0.lua"))()
+used = {}
+
+function teleportAndMove()
+    if #used >= #locations then
+        used = {}
+    end
+    repeat
+        index = math.random(1, #locations)
+    until not table.find(used, index)
+    table.insert(used, index)
+
+    hrp.CFrame = CFrame.new(locations[index])
+    task.wait(0.05)
+    hrp.CFrame = hrp.CFrame * CFrame.new(0, -4, 0)
+    task.wait(0.05)
+    hrp.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
+end
+
+while true do
+    teleportAndMove()
+    task.wait(DELAY)
+end
+end
