@@ -1,177 +1,51 @@
-TRICK_OR_TREAT = true
-DELAY = 0.5
-AUTO_HATCH_EGG = true
-EVERY_NUMBER_HOUSE = 10
-AUTO_HATCH_DELAY = 60
+setfpscap(5)
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+getgenv().bgsInfConfig = {
+    ADD_FRIEND = true,
+    AUTO_UPDATE_RESTART = false,
+    IGNORE_MINIGAME = true,
+    GIVE_BUBBLE_SHRINE = {"Coins", "Tickets"},
+    MIN_GIVE_BUBBLE_SHRINE = 500,
+    IGNORE_SEASON_CHALLENGES = true,
 
-local player = Players.LocalPlayer
-local remote = ReplicatedStorage:WaitForChild("Shared")
-    :WaitForChild("Framework")
-    :WaitForChild("Network")
-    :WaitForChild("Remote")
-    :WaitForChild("RemoteEvent")
+    PURCHASE_ALIENSHOP = true,
+    PURCHASE_BLACKMARKET = true,
+    PURCHASE_DICE_MERCHANT = true,
+    PURCHASE_TRAVELING_MERCHANT = true,
+    PURCHASE_STARSHOP_SLOT = 14,
+    RESTOCK_SHOP = "Festival Shop",
+    PURCHASE_STARSHOP_SLOT = 14,
+    MASTERY_BUFFS_LEVEL = 5,
 
-local LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
+    USE_ROYAL_KEY = false,
+    USE_SUPER_KEY = false,
+    USE_DICE_KEY = false,
+    USE_MYSTERY_BOX = false,
 
-local priority = {
-    ["Sinister Lord"] = 1,
-    ["King Skull"] = 2,
-    ["Sinister Skull"] = 3,
-    ["Guardian Skull"] = 4,
-    ["Wolf Skull"] = 5,
-    ["Angelic Skull"] = 6,
-    ["All Seeing Shard"] = 7,
-    ["Witches Pot"] = 8,
-    ["Equinox"] = 9,
-    ["Crimson Eye"] = 10,
-    ["Pure Vessel"] = 11,
-    ["Dark Vessel"] = 12,
-    ["Light Vessel"] = 13,
+    RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
+    RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
+    MAX_LEGENDARY_TIER_TO_DELETE = 3,
+    DELETE_LEGENDARY_SHINY = true,
+    DELETE_LEGENDARY_MYTHIC = true,
+    PETS_TO_DELETE = {"Emerald Golem", "Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem"},
+
+    IGNORE_STARTER_HATCH = true,
+    AUTO_BOUNTY_RIFT = true,
+    MIN_RIFT_MULTIPLIER = 25,
+    RIFT_EGGS = {"Lunar Egg"},
+    HATCH_1X_EGG = {"Lunar Egg"},
+    ALWAYS_INFINITY_ELIXIR = true,
+    ALWAYS_EGG_ELIXIR = true,
+    ALWAYS_SECRET_ELIXIR = true,
+    IGNORE_MYSTERY_BOX_GEM_CAP = true,
+    IGNORE_EQUIP_BEST_PET = false,
+
+
+    WEBHOOK_URL = "",
+    DISCORD_ID = "",
+    WEBHOOK_NOTE = "Secret Hatched!",
+    WEBHOOK_ODDS = "100m",
+    SHOW_PET_WEBHOOK_USERNAME = true,
 }
 
-task.spawn(function()
-    while true do
-        local ok, data = pcall(function()
-            return LocalData:Get()
-        end)
-
-        if ok and data and data.Pets then
-            local equipped = {}
-            local equippedList = {}
-            if data.Teams and data.TeamEquipped then
-                local team = data.Teams[data.TeamEquipped]
-                if team and team.Pets then
-                    for _, id in ipairs(team.Pets) do
-                        equipped[id] = true
-                        table.insert(equippedList, id)
-                    end
-                end
-            end
-
-            local pets = {}
-            for _, pet in pairs(data.Pets) do
-                if priority[pet.Name] then
-                    table.insert(pets, pet)
-                end
-            end
-
-            table.sort(pets, function(a, b)
-                return priority[a.Name] < priority[b.Name]
-            end)
-
-            for _, pet in ipairs(pets) do
-                if not equipped[pet.Id] then
-                    if #equippedList > 0 then
-                        local worstId, worstPriority
-                        for _, eid in ipairs(equippedList) do
-                            local ePet
-                            for _, p in pairs(data.Pets) do
-                                if p.Id == eid then
-                                    ePet = p
-                                    break
-                                end
-                            end
-                            if ePet and priority[ePet.Name] then
-                                local pr = priority[ePet.Name]
-                                if not worstPriority or pr > worstPriority then
-                                    worstPriority = pr
-                                    worstId = ePet.Id
-                                end
-                            end
-                        end
-                        if worstId and worstPriority and priority[pet.Name] < worstPriority then
-                            remote:FireServer("UnequipPet", worstId)
-                            task.wait(0.1)
-                            remote:FireServer("EquipPet", pet.Id)
-                            task.wait(0.1)
-                            for i, eid in ipairs(equippedList) do
-                                if eid == worstId then
-                                    table.remove(equippedList, i)
-                                    break
-                                end
-                            end
-                            table.insert(equippedList, pet.Id)
-                        end
-                    else
-                        remote:FireServer("EquipPet", pet.Id)
-                        task.wait(0.1)
-                        table.insert(equippedList, pet.Id)
-                    end
-                end
-            end
-        end
-        task.wait(5)
-    end
-end)
-
-if TRICK_OR_TREAT then
-    spawn(function()
-        local player = game.Players.LocalPlayer
-        local hrp = player.Character:WaitForChild("HumanoidRootPart")
-
-        local locations = {
-            Vector3.new(-5033.50, 22.37, -619.40),
-            Vector3.new(-5052.92, 22.37, -596.65),
-            Vector3.new(-5036.97, 25.16, -550.20),
-            Vector3.new(-5058.79, 25.16, -555.47),
-            Vector3.new(-5079.90, 22.31, -686.93),
-            Vector3.new(-5053.41, 22.31, -698.50),
-            Vector3.new(-4984.23, 16.32, -685.97),
-            Vector3.new(-4962.21, 16.32, -692.00),
-            Vector3.new(-4888.24, 21.87, -489.50),
-            Vector3.new(-4890.34, 21.87, -468.01),
-            Vector3.new(-4935.93, 19.08, -452.81),
-            Vector3.new(-4964.18, 19.08, -460.37)
-        }
-
-        local used = {}
-        local houseCount = 0
-
-        local function teleportAndMove()
-            if #used >= #locations then
-                used = {}
-            end
-            local index
-            repeat
-                index = math.random(1, #locations)
-            until not table.find(used, index)
-            table.insert(used, index)
-
-            hrp.CFrame = CFrame.new(locations[index])
-            task.wait(0.05)
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, -4, 0)
-            task.wait(0.05)
-            hrp.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
-        end
-
-        local function autoHatch()
-            local VirtualInputManager = game:GetService("VirtualInputManager")
-            local Players = game:GetService("Players")
-            local ReplicatedStorage = game:GetService("ReplicatedStorage")
-            local player = Players.LocalPlayer
-            if not player.Character then player.CharacterAdded:Wait() end
-            player.Character:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(-4929.70654296875, 26.532316207885742, -546.8717651367188)
-            require(ReplicatedStorage.Client.Effects.HatchEgg).Play = function() return end
-            local t = tick()
-            while tick() - t < AUTO_HATCH_DELAY do
-                VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
-                task.wait(0.05)
-                VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
-                task.wait(0.05)
-            end
-        end
-
-        while true do
-            teleportAndMove()
-            houseCount = houseCount + 1
-            if AUTO_HATCH_EGG and houseCount >= EVERY_NUMBER_HOUSE then
-                autoHatch()
-                houseCount = 0
-            end
-            task.wait(DELAY)
-        end
-    end)
-end
+loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/e1f274825da00b92599872de596f1fc0.lua"))()
