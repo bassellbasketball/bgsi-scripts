@@ -1,52 +1,45 @@
 TRICK_OR_TREAT = true
 DELAY = 0.5
-AUTO_HATCH_EGG = true
-EVERY_NUMBER_HOUSE = 10
-AUTO_HATCH_DELAY = 60
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+if TRICK_OR_TREAT then
+player = game.Players.LocalPlayer
+hrp = player.Character:WaitForChild("HumanoidRootPart")
 
-local player = Players.LocalPlayer
-local remote = ReplicatedStorage:WaitForChild("Shared")
-    :WaitForChild("Framework")
-    :WaitForChild("Network")
-    :WaitForChild("Remote")
-    :WaitForChild("RemoteEvent")
-
-local LocalData = require(ReplicatedStorage.Client.Framework.Services.LocalData)
-
-local priority = {
-    ["Sinister Lord"] = 1,
-    ["King Skull"] = 2,
-    ["Sinister Skull"] = 3,
-    ["Guardian Skull"] = 4,
-    ["Wolf Skull"] = 5,
-    ["Angelic Skull"] = 6,
-    ["All Seeing Shard"] = 7,
-    ["Witches Pot"] = 8,
-    ["Equinox"] = 9,
-    ["Crimson Eye"] = 10,
-    ["Pure Vessel"] = 11,
-    ["Dark Vessel"] = 12,
-    ["Light Vessel"] = 13,
+locations = {
+    Vector3.new(-5033.50, 22.37, -619.40),
+    Vector3.new(-5052.92, 22.37, -596.65),
+    Vector3.new(-5036.97, 25.16, -550.20),
+    Vector3.new(-5058.79, 25.16, -555.47),
+    Vector3.new(-5079.90, 22.31, -686.93),
+    Vector3.new(-5053.41, 22.31, -698.50),
+    Vector3.new(-4984.23, 16.32, -685.97),
+    Vector3.new(-4962.21, 16.32, -692.00),
+    Vector3.new(-4888.24, 21.87, -489.50),
+    Vector3.new(-4890.34, 21.87, -468.01),
+    Vector3.new(-4935.93, 19.08, -452.81),
+    Vector3.new(-4964.18, 19.08, -460.37)
 }
 
-task.spawn(function()
-    while true do
-        local ok, data = pcall(function()
-            return LocalData:Get()
-        end)
+used = {}
 
-        if ok and data and data.Pets then
-            local equipped = {}
-            local equippedList = {}
-            if data.Teams and data.TeamEquipped then
-                local team = data.Teams[data.TeamEquipped]
-                if team and team.Pets then
-                    for _, id in ipairs(team.Pets) do
-                        equipped[id] = true
-                        table.insert(equippedList, id)
-                    end
-                end
-            end
+function teleportAndMove()
+    if #used >= #locations then
+        used = {}
+    end
+    repeat
+        index = math.random(1, #locations)
+    until not table.find(used, index)
+    table.insert(used, index)
+
+    hrp.CFrame = CFrame.new(locations[index])
+    task.wait(0.05)
+    hrp.CFrame = hrp.CFrame * CFrame.new(0, -4, 0)
+    task.wait(0.05)
+    hrp.CFrame = hrp.CFrame * CFrame.new(0, 5, 0)
+end
+
+while true do
+    teleportAndMove()
+    task.wait(DELAY)
+end
+end
