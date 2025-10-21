@@ -1,8 +1,8 @@
 TRICK_OR_TREAT = true
 DELAY = 0.5
 AUTO_HATCH_EGG = true
-EVERY_NUMBER_HOUSE = 10
-AUTO_HATCH_DELAY = 60
+EVERY_NUMBER_HOUSE = 5
+AUTO_HATCH_DELAY = 10
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
