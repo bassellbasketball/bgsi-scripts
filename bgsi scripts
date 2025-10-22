@@ -1,1 +1,22 @@
+getgenv().running = not getgenv().running
 
+local potions = {
+    {"Halloween Elixir", 1},
+    {"Halloween Elixir", 2},
+    {"Halloween Elixir", 3},
+    {"Halloween Elixir", 4},
+    {"Halloween Elixir", 5},
+    {"Halloween Elixir", 6},
+    {"Halloween Elixir", 7}
+}
+
+local RunService = game:GetService("RunService")
+
+RunService.Heartbeat:Connect(function()
+    if getgenv().running then
+        for _, potion in ipairs(potions) do
+            local args = {"UsePotion", potion[1], potion[2]}
+            game:GetService("ReplicatedStorage").Shared.Framework.Network.Remote.RemoteEvent:FireServer(unpack(args))
+        end
+    end
+end)
