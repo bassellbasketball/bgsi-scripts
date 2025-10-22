@@ -1,22 +1,19 @@
-getgenv().running = not getgenv().running
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local potions = {
-    {"Halloween Elixir", 1},
-    {"Halloween Elixir", 2},
-    {"Halloween Elixir", 3},
-    {"Halloween Elixir", 4},
-    {"Halloween Elixir", 5},
-    {"Halloween Elixir", 6},
-    {"Halloween Elixir", 7}
-}
+local player = Players.LocalPlayer
+if not player.Character then player.CharacterAdded:Wait() end
+player.Character:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(-4929.70654296875, 26.532316207885742, -546.8717651367188)
 
-local RunService = game:GetService("RunService")
+require(ReplicatedStorage.Client.Effects.HatchEgg).Play = function() return end
 
-RunService.Heartbeat:Connect(function()
-    if getgenv().running then
-        for _, potion in ipairs(potions) do
-            local args = {"UsePotion", potion[1], potion[2]}
-            game:GetService("ReplicatedStorage").Shared.Framework.Network.Remote.RemoteEvent:FireServer(unpack(args))
-        end
+task.spawn(function()
+    while true do
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
     end
 end)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/malikstt/script/refs/heads/main/optimization"))()
