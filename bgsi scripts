@@ -1,51 +1,21 @@
-setfpscap(5)
-
-getgenv().bgsInfConfig = {
-    ADD_FRIEND = true,
-    AUTO_UPDATE_RESTART = false,
-    IGNORE_MINIGAME = true,
-    GIVE_BUBBLE_SHRINE = {"Coins", "Tickets"},
-    MIN_GIVE_BUBBLE_SHRINE = 500,
-    IGNORE_SEASON_CHALLENGES = true,
-
-    PURCHASE_ALIENSHOP = true,
-    PURCHASE_BLACKMARKET = true,
-    PURCHASE_DICE_MERCHANT = true,
-    PURCHASE_TRAVELING_MERCHANT = true,
-    PURCHASE_STARSHOP_SLOT = 14,
-    RESTOCK_SHOP = "Festival Shop",
-    PURCHASE_STARSHOP_SLOT = 14,
-    MASTERY_BUFFS_LEVEL = 5,
-
-    USE_ROYAL_KEY = false,
-    USE_SUPER_KEY = false,
-    USE_DICE_KEY = false,
-    USE_MYSTERY_BOX = false,
-
-    RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
-    RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
-    MAX_LEGENDARY_TIER_TO_DELETE = 3,
-    DELETE_LEGENDARY_SHINY = true,
-    DELETE_LEGENDARY_MYTHIC = true,
-    PETS_TO_DELETE = {"Emerald Golem", "Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem"},
-
-    IGNORE_STARTER_HATCH = true,
-    AUTO_BOUNTY_RIFT = true,
-    MIN_RIFT_MULTIPLIER = 25,
-    RIFT_EGGS = {"Mining Egg"},
-    HATCH_1X_EGG = {"Mining Egg"},
-    ALWAYS_INFINITY_ELIXIR = true,
-    ALWAYS_EGG_ELIXIR = true,
-    ALWAYS_SECRET_ELIXIR = true,
-    IGNORE_MYSTERY_BOX_GEM_CAP = true,
-    IGNORE_EQUIP_BEST_PET = false,
-
-
-    WEBHOOK_URL = "",
-    DISCORD_ID = "",
-    WEBHOOK_NOTE = "Secret Hatched!",
-    WEBHOOK_ODDS = "100m",
-    SHOW_PET_WEBHOOK_USERNAME = true,
-}
-
-loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/e1f274825da00b92599872de596f1fc0.lua"))()
+local s = "{\"AutoCompetitionQuests\":false,\"ShinyRatio\":\"0\",\"AutoFestivalSpinWheel\":true,\"AutoPressE\":true,\"fishing-shop\":[],\"HideHatchAnim\":true,\"SelectMasteries\":[],\"SellSlider\":100,\"AutoDiceChest\":false,\"Webhook\":\"\",\"Autospooky-shop\":false,\"Autohalloween-shop\":false,\"AutoSuperChest\":false,\"UniqueEggToHatch\":[\"Mining Egg\"],\"EpicEggToHatch\":[\"Mining Egg\"],\"NormalRatio\":\"0\",\"SelectTeamThe Overworld\":[],\"AutoChest\":true,\"EnchantMethod\":[\"Gems first, get one, use reroll Orb\"],\"AutoMastery\":false,\"SelectChests\":[\"Giant Chest\",\"Void Chest\",\"Ticket Chest\"],\"Autofestival-shop\":false,\"AutoAutumnSpinWheel\":true,\"AutoDogJump\":false,\"AutoCartEscape\":false,\"SpecificRatio\":\"0\",\"UserIdToPing\":\"everyone\",\"RareEggToHatch\":[\"Mining Egg\"],\"BlessingTimeDreamerShrine\":3660,\"StartEnchanting\":false,\"SelectPotionsToUseRift10\":[],\"PreferredEggToHatch\":[\"Mining Egg\"],\"AutoGoToRiftEggs\":false,\"AutoPlaytime\":true,\"SelectPotionsToUseRift1\":[],\"CommonEggToHatch\":[\"Mining Egg\"],\"LegendaryEggToHatch\":[\"Mining Egg\"],\"SelectEgg\":[\"Sinister Egg\"],\"AutoPetMatch\":false,\"SelectPotionsToUseRift25\":[],\"AutoShrine\":true,\"AutoRiftGift\":false,\"LuckySinisterEgg\":true,\"MythicEggToHatch\":[\"Mining Egg\"],\"AutoGoldChest\":false,\"SelectTiles\":[],\"AutoPotion\":true,\"AutoCoinsForce\":false,\"BlessingTime\":11.65,\"ShinyOnly\":false,\"Autodice-shop\":false,\"dice-shop\":[],\"RenderDistance\":2,\"AutoFishing\":false,\"BuyAll\":true,\"SelectDonateItemsDreamerShrine\":[],\"GoldKeySlider\":1,\"MinigameDifficulties\":[\"Insane\"],\"HatchAmount\":[],\"AutoCoins\":true,\"shard-shop\":[],\"AutoOpenEgg\":true,\"AutoSpinWheel\":true,\"DetermineBestEgg\":[],\"NotifyLegendary\":true,\"AutoSellBubble\":false,\"SelectPotionsToUseNormal\":[\"Egg Elixir 1\",\"Infinity Elixir 1\",\"Lucky 7\",\"Mythic 7\",\"Speed 7\",\"Halloween Elixir 4\"],\"spooky-shop\":[\"Infinity Elixir\",\"Egg Elixir\",\"Secret Elixir\",\"Halloween Spin Ticket\",\"Halloween Elixir 1\",\"Halloween Elixir 2\",\"Halloween Elixir 3\",\"Halloween Elixir 4\",\"Lucky 6\",\"Coins 6\",\"Mythic 6\",\"Lucky 7\",\"Coins 7\",\"Mythic 7\",\"Speed 7\",\"Reroll Orb\",\"Power Orb\",\"Royal Key\",\"Super Key\"],\"Autoshard-shop\":false,\"AutoDonateToDreamerShrine\":false,\"ShinyMythicOnly\":false,\"SelectPotionsToUseAura\":[],\"AutoBubble\":false,\"SelectSellLocation\":[],\"AutoRollDice\":false,\"halloween-shop\":[],\"AutoHalloweenUpgrades\":true,\"AutoTrickOrTreat\":false,\"alien-shop\":[],\"festival-shop\":[],\"Autotraveling-merchant\":false,\"EnabledQuestTypes\":[\"Mythic\",\"Shiny\",\"Normal\",\"SpecificRarity\"],\"traveling-merchant\":[],\"Autofishing-shop\":false,\"AutoRobotClaw\":false,\"AutoHyperDarts\":false,\"RareEggPriority\":false,\"MythicRatio\":\"0\",\"HideTransition\":true,\"SelectMinigamesToSkipTime\":[\"Corn Maze\"],\"SelectDonateMutationsDreamerShrine\":[],\"AutoRoyalChest\":false,\"SelectEggRift\":[],\"Autoalien-shop\":false,\"SelectedEnchants\":[\"gleaming 1\"],\"MythicOnly\":false,\"AlwaysNotifySecrets\":true,\"SelectPotionsToUseRift5\":[],\"AutoMysteryBox\":false,\"SelectTeamMinigame Paradise\":[],\"SelectDonateItems\":[\"Coins 6\",\"Speed 6\",\"Tickets 6\",\"Lucky 6\",\"Mythic 6\",\"Speed 5\",\"Tickets 5\",\"Mythic 5\",\"Lucky 5\",\"Coins 5\",\"Tickets 4\",\"Coins 4\",\"Speed 4\",\"Lucky 4\",\"Mythic 4\",\"Lucky 3\",\"Coins 3\",\"Mythic 3\",\"Tickets 3\",\"Speed 3\",\"Lucky 2\",\"Coins 2\",\"Speed 2\",\"Mythic 2\",\"Tickets 2\",\"Tickets 1\",\"Mythic 1\",\"Coins 1\",\"Lucky 1\",\"Speed 1\"],\"MinimumRarity\":\"69420\",\"AutoClaimFreeSpin\":false}"
+local s2 = "{\"Sinister Egg\":{\"Y\":25.959270477294923,\"X\":-4928.32275390625,\"Z\":-547.9945678710938}}"
+if not isfolder("IdiotHub") then makefolder("IdiotHub") end
+local path = "IdiotHub/Bubble Gum Simulator Infinity.rfld"
+local path2 = "IdiotHub/bgsiEggs.json"
+local ok2, existing = pcall(readfile, path2)
+local newData = game:GetService("HttpService"):JSONDecode(s2)
+if ok2 then
+    local ok3, existingData = pcall(function()
+        return game:GetService("HttpService"):JSONDecode(existing)
+    end)
+    if ok3 and type(existingData) == "table" then
+        for k,v in pairs(newData) do
+            existingData[k] = v
+        end
+        s2 = game:GetService("HttpService"):JSONEncode(existingData)
+    end
+end
+writefile(path2, s2)
+writefile(path, s)
+loadstring(game:HttpGet("https://raw.githubusercontent.com/IdiotHub/Scripts/main/Loader"))()
