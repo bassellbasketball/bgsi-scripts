@@ -17,11 +17,6 @@ getgenv().bgsInfConfig = {
     PURCHASE_STARSHOP_SLOT = 14,
     MASTERY_BUFFS_LEVEL = 5,
 
-    USE_ROYAL_KEY = false,
-    USE_SUPER_KEY = false,
-    USE_DICE_KEY = false,
-    USE_MYSTERY_BOX = false,
-
     RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
     RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
     MAX_LEGENDARY_TIER_TO_DELETE = 3,
@@ -36,7 +31,6 @@ getgenv().bgsInfConfig = {
     HATCH_1X_EGG = {"Lunar Egg"},
     ALWAYS_INFINITY_ELIXIR = true,
     ALWAYS_EGG_ELIXIR = true,
-    ALWAYS_SECRET_ELIXIR = false,
     IGNORE_MYSTERY_BOX_GEM_CAP = true,
     IGNORE_EQUIP_BEST_PET = true,
 
