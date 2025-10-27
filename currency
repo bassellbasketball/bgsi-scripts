@@ -1,4 +1,4 @@
-local s = "{\"MinigameDifficulties\":[\"Hard\"],\"AutoSpookyDarts\":true,\"SelectMinigamesToSkipTime\":[\"Spooky Darts\"]}"
+local s = "{\"MinigameDifficulties\":[\"Medium\"],\"AutoSpookyDarts\":true,\"SelectMinigamesToSkipTime\":[\"Spooky Darts\"]}"
 local s2 = "{}"
 if not isfolder("IdiotHub") then makefolder("IdiotHub") end
 local path = "IdiotHub/Bubble Gum Simulator Infinity.rfld"
