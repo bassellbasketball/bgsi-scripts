@@ -1,4 +1,4 @@
-setfpscap(3)
+setfpscap(5)
 
 getgenv().bgsInfConfig = {
     ADD_FRIEND = true,
@@ -27,11 +27,10 @@ getgenv().bgsInfConfig = {
     IGNORE_STARTER_HATCH = true,
     AUTO_BOUNTY_RIFT = true,
     MIN_RIFT_MULTIPLIER = 25,
-    RIFT_EGGS = {"Crystal Egg"},
-    HATCH_1X_EGG = {"Crystal Egg"},
+    RIFT_EGGS = {"Void Egg"},
+    HATCH_1X_EGG = {"Void Egg"},
     ALWAYS_INFINITY_ELIXIR = true,
     ALWAYS_EGG_ELIXIR = true,
-    ALWAYS_SECRET_ELIXIR = true,
     IGNORE_MYSTERY_BOX_GEM_CAP = true,
     IGNORE_EQUIP_BEST_PET = true,
 
