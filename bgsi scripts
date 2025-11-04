@@ -27,13 +27,10 @@ getgenv().bgsInfConfig = {
     IGNORE_STARTER_HATCH = true,
     AUTO_BOUNTY_RIFT = true,
     MIN_RIFT_MULTIPLIER = 25,
-    RIFT_EGGS = {"Void Egg"},
-    HATCH_1X_EGG = {"Void Egg"},
+    RIFT_EGGS = {"Common Egg"},
+    HATCH_1X_EGG = {"Common Egg"},
     ALWAYS_INFINITY_ELIXIR = true,
-    ALWAYS_EGG_ELIXIR = true,
-    IGNORE_MYSTERY_BOX_GEM_CAP = true,
     IGNORE_EQUIP_BEST_PET = true,
-
 
     WEBHOOK_URL = "",
     DISCORD_ID = "",
