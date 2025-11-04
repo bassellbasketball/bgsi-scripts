@@ -27,6 +27,8 @@ getgenv().bgsInfConfig = {
     IGNORE_STARTER_HATCH = true,
     AUTO_BOUNTY_RIFT = true,
     MIN_RIFT_MULTIPLIER = 25,
+    RIFT_EGGS = {"Magma Egg"},
+    HATCH_1X_EGG = {"Magma Egg"},
     ALWAYS_INFINITY_ELIXIR = true,
     IGNORE_EQUIP_BEST_PET = true,
 
