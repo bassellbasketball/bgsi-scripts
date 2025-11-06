@@ -16,6 +16,7 @@ getgenv().bgsInfConfig = {
     RESTOCK_SHOP = "Festival Shop",
     PURCHASE_STARSHOP_SLOT = 14,
     MASTERY_BUFFS_LEVEL = 5,
+    USE_MYSTERY_BOX = true,
 
     RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
     RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
@@ -27,8 +28,8 @@ getgenv().bgsInfConfig = {
     IGNORE_STARTER_HATCH = true,
     AUTO_BOUNTY_RIFT = true,
     MIN_RIFT_MULTIPLIER = 25,
-    RIFT_EGGS = {"Magma Egg"},
-    HATCH_1X_EGG = {"Magma Egg"},
+    RIFT_EGGS = {"Crystal Egg"},
+    HATCH_1X_EGG = {"Crystal Egg"},
     ALWAYS_INFINITY_ELIXIR = true,
     IGNORE_EQUIP_BEST_PET = true,
 
