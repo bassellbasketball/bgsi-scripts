@@ -28,6 +28,8 @@ getgenv().bgsInfConfig = {
     IGNORE_STARTER_HATCH = true,
     INFINITY_EGG_TYPE = "World1",
     ALWAYS_INFINITY_ELIXIR = true,
+    ALWAYS_EGG_ELIXIR = true,
+    ALWAYS_SECRET_ELIXIR = true,
     IGNORE_EQUIP_BEST_PET = true,
 
     WEBHOOK_URL = "",
