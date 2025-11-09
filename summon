@@ -1,26 +1,18 @@
-local args = {
-    "SummonRift",
-    {
-        Type = "Egg",
-        Time = 5,
-        Name = "Crystal Egg",
-        Luck = 5,
-        World = "The Overworld"
-    }
-}
+local VirtualInputManager = game:GetService("VirtualInputManager")
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local function executeSummon()
-    local success, err = pcall(function()
-        game:GetService("ReplicatedStorage"):WaitForChild("Shared"):WaitForChild("Framework"):WaitForChild("Network"):WaitForChild("Remote"):WaitForChild("RemoteFunction"):InvokeServer(unpack(args))
-    end)
-    if not success then
-        warn("Error executing summon: " .. tostring(err))
+local player = Players.LocalPlayer
+if not player.Character then player.CharacterAdded:Wait() end
+player.Character:WaitForChild("HumanoidRootPart").CFrame = CFrame.new(68.03, 9.25, 25.30)
+
+require(ReplicatedStorage.Client.Effects.HatchEgg).Play = function() return end
+
+task.spawn(function()
+    while true do
+        VirtualInputManager:SendKeyEvent(true, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
+        VirtualInputManager:SendKeyEvent(false, Enum.KeyCode.E, false, game)
+        task.wait(0.05)
     end
-end
-
-executeSummon()
-
-while true do
-    wait(1800)
-    executeSummon()
-end
+end)
