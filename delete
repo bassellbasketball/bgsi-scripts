@@ -12,9 +12,7 @@ getgenv().bgsInfConfig = {
     PURCHASE_BLACKMARKET = true,
     PURCHASE_DICE_MERCHANT = true,
     PURCHASE_TRAVELING_MERCHANT = true,
-    PURCHASE_STARSHOP_SLOT = 14,
-    RESTOCK_SHOP = "Festival Shop",
-    PURCHASE_STARSHOP_SLOT = 14,
+    RESTOCK_SHOP = "Blackmarket",
     MASTERY_BUFFS_LEVEL = 5,
 
     RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
@@ -31,7 +29,6 @@ getgenv().bgsInfConfig = {
     HATCH_1X_EGG = {"Rainbow Egg"},
     ALWAYS_INFINITY_ELIXIR = true,
     ALWAYS_EGG_ELIXIR = true,
-    IGNORE_MYSTERY_BOX_GEM_CAP = true,
     IGNORE_EQUIP_BEST_PET = true,
 
 
