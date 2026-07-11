@@ -1,42 +1,1962 @@
-setfpscap(5)
+-- ══════════════════════════════════════════════════════════
+-- Rayfield UI — Auto Script (Full)
+-- ══════════════════════════════════════════════════════════
 
-getgenv().bgsInfConfig = {
-    ADD_FRIEND = true,
-    AUTO_UPDATE_RESTART = false,
-    IGNORE_MINIGAME = true,
-    GIVE_BUBBLE_SHRINE = {"Coins", "Tickets"},
-    MIN_GIVE_BUBBLE_SHRINE = 500,
-    IGNORE_SEASON_CHALLENGES = true,
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-    PURCHASE_ALIENSHOP = true,
-    PURCHASE_BLACKMARKET = true,
-    PURCHASE_DICE_MERCHANT = true,
-    PURCHASE_TRAVELING_MERCHANT = true,
-    PURCHASE_STARSHOP_SLOT = 14,
-    RESTOCK_SHOP = "Festival Shop",
-    PURCHASE_STARSHOP_SLOT = 14,
-    MASTERY_BUFFS_LEVEL = 5,
+local Window = Rayfield:CreateWindow({
+    Name = "YES hub",
+    LoadingTitle = "YES hub",
+    LoadingSubtitle = "Loading...",
+    Theme = "Default",
+    DisableRayfieldPrompts = false,
+    DisableBuildWarnings = false,
+    ConfigurationSaving = { Enabled = true, FolderName = "YESHub", FileName = "Config" },
+    KeySystem = false,
+})
 
-    RARITY_TO_DELETE = {"Common", "Unique", "Rare", "Epic", "Legendary"},
-    RARITY_TO_SHINY = {"Common", "Unique", "Rare", "Epic", "Legendary"},
-    MAX_LEGENDARY_TIER_TO_DELETE = 3,
-    DELETE_LEGENDARY_SHINY = true,
-    DELETE_LEGENDARY_MYTHIC = true,
-    PETS_TO_DELETE = {"Emerald Golem", "Split", "Dragon Split", "Celestial Split", "Demonarium", "Contrast", "Robo Kitty", "Martian Kitty", "Cyber Wolf", "Cyber Phoenix", "Space Invader", "Bionic Shard", "Hell Piggy", "Hell Dragon", "Hell Crawler", "Inferno Dragon", "Inferno Cube", "Virus", "Space Mouse", "Space Bull", "Lunar Fox", "Lunarcorn", "Lunar Serpent", "Electra", "Cave Bat", "Dark Bat", "Angel", "Emerald Bat", "Unicorn", "Flying Pig", "Round Spitty", "Neon Doggy", "Hologram Dragon", "Disco Ball", "Neon Wyvern", "Neon Wire Eye", "Equalizer", "Mining Doggy", "Mining Bat", "Cave Mole", "Ore Golem", "Crystal Unicorn", "Stone Golem"},
+-- ══════════════════════════════════════════════════════════
+-- SERVICES
+-- ══════════════════════════════════════════════════════════
 
-    IGNORE_STARTER_HATCH = true,
-    INFINITY_EGG_TYPE = "World1",
-    ALWAYS_INFINITY_ELIXIR = true,
-    HATCH_1X_EGG = {"Infinity Egg"},
-    ALWAYS_EGG_ELIXIR = true,
-    ALWAYS_SECRET_ELIXIR = true,
-    IGNORE_EQUIP_BEST_PET = true,
+local Players  = game:GetService("Players")
+local RS       = game:GetService("ReplicatedStorage")
+local VIM      = game:GetService("VirtualInputManager")
+local RunSvc   = game:GetService("RunService")
+local lp       = Players.LocalPlayer
 
-    WEBHOOK_URL = "",
-    DISCORD_ID = "",
-    WEBHOOK_NOTE = "Secret Hatched!",
-    WEBHOOK_ODDS = "100m",
-    SHOW_PET_WEBHOOK_USERNAME = true,
+-- ══════════════════════════════════════════════════════════
+-- AUTO APPLY SETTINGS ON STARTUP
+-- Remote: "toggle setting" FireServer({ settingName })
+-- Settings default=2 means Off by default, default=1 means On
+-- We read save.Settings[name] and only toggle if wrong value
+-- 1 = On (index 1 of options {"On","Off"}), 2 = Off
+-- ══════════════════════════════════════════════════════════
+
+task.spawn(function()
+    local Network = RS:WaitForChild("Network", 15); if not Network then return end
+    local toggleSetting = Network:WaitForChild("toggle setting", 15)
+    if not toggleSetting then return end
+
+    task.wait(3) -- wait for framework and save to load
+
+    local function fw2()
+        local ok, f = pcall(require, RS:WaitForChild("Framework", 5))
+        return ok and f or nil
+    end
+
+    -- Wait for framework
+    local f = nil
+    for _ = 1, 30 do
+        f = fw2()
+        if f and f.Loaded then break end
+        task.wait(0.5)
+    end
+
+    -- Desired states: settingName = desired value (1=On, 2=Off)
+    local DESIRED = {
+        HideOtherPets      = 1,  -- On  (screenshot)
+        HideMyPets         = 1,  -- On
+        SkipLegendaryHatch = 1,  -- On
+        PotatoMode         = 1,  -- On
+        HeightMeter        = 1,  -- On
+        BubbleLock         = 2,  -- Off
+        BubbleFX           = 2,  -- Off
+        RebirthFX          = 2,  -- Off
+        ShowBubbles        = 2,  -- Off
+        BubbleGravity      = 2,  -- Off
+        ShowFPS            = 2,  -- Off
+        ItemNotifications  = 2,  -- Off
+        ChatTips           = 2,  -- Off
+    }
+
+    local save = f and f.Save and f.Save.Get and f.Save.Get()
+    local settings = save and save.Settings or {}
+
+    for settingName, desired in pairs(DESIRED) do
+        local current = tonumber(settings[settingName]) or 1
+        if current ~= desired then
+            pcall(function() toggleSetting:FireServer({ settingName }) end)
+            task.wait(0.2)
+        end
+    end
+    print("[Settings] Auto-applied startup settings")
+end)
+
+-- ══════════════════════════════════════════════════════════
+-- EGG UNLOCK VIEWED — fires for all eggs on startup
+-- Remote: "egg unlock viewed" FireServer({ eggName })
+-- Then checks every 5 min for newly unlocked mastery eggs
+-- ══════════════════════════════════════════════════════════
+
+-- All eggs confirmed from decompile with masteryLvl requirements
+local ALL_EGGS_WITH_MASTERY = {
+    { name = "Basic Egg",        masteryLvl = 0  },
+    { name = "Galaxy Egg",       masteryLvl = 0  },
+    { name = "Crystalite Egg",   masteryLvl = 0  },
+    { name = "Spotted Egg",      masteryLvl = 2  },
+    { name = "Spikey Egg",       masteryLvl = 4  },
+    { name = "Arcane Egg",       masteryLvl = 6  },
+    { name = "Frosted Egg",      masteryLvl = 9  },
+    { name = "Cosmic Void Egg",  masteryLvl = 20 },
+    { name = "Abstrax Egg",      masteryLvl = 30 },
+    { name = "Release Egg",      masteryLvl = 0  },
+    { name = "Twilight Egg",     masteryLvl = 0  },
+    { name = "Phoenix Egg",      masteryLvl = 0  },
+    { name = "Crystal Egg",      masteryLvl = 0  },
+    { name = "Surprise Egg",     masteryLvl = 0  },
 }
 
-loadstring(game:HttpGet("https://api.luarmor.net/files/v3/loaders/e1f274825da00b92599872de596f1fc0.lua"))()
+local eggUnlockViewedRemote = nil
+task.spawn(function()
+    eggUnlockViewedRemote = RS:WaitForChild("Network"):WaitForChild("egg unlock viewed", 30)
+end)
+
+local viewedEggs = {} -- track which eggs we've already viewed this session
+
+local function getPlayerMasteryLevel()
+    local ok, f = pcall(require, RS:WaitForChild("Framework", 5))
+    if not ok or not f then return 0 end
+    local save = f.Save and f.Save.Get and f.Save.Get()
+    if not save then return 0 end
+    local mastery = save.Mastery and save.Mastery.Eggs or 0
+    -- Convert mastery XP to level using framework
+    if f.Shared and f.Shared.MasteryXPToLevel then
+        return f.Shared.MasteryXPToLevel(mastery) or 0
+    end
+    return 0
+end
+
+local function viewUnlockedEggs()
+    if not eggUnlockViewedRemote then return end
+    local masteryLevel = getPlayerMasteryLevel()
+    local newlyViewed  = 0
+
+    for _, egg in ipairs(ALL_EGGS_WITH_MASTERY) do
+        if masteryLevel >= egg.masteryLvl and not viewedEggs[egg.name] then
+            pcall(function() eggUnlockViewedRemote:FireServer({ egg.name }) end)
+            viewedEggs[egg.name] = true
+            newlyViewed = newlyViewed + 1
+            task.wait(0.2)
+        end
+    end
+
+    return newlyViewed
+end
+
+local function hasUnviewedMasteryEggs()
+    local masteryLevel = getPlayerMasteryLevel()
+    for _, egg in ipairs(ALL_EGGS_WITH_MASTERY) do
+        if egg.masteryLvl > 0 and masteryLevel >= egg.masteryLvl and not viewedEggs[egg.name] then
+            return true
+        end
+    end
+    return false
+end
+
+-- Fire on startup for all eggs immediately
+task.spawn(function()
+    task.wait(3)
+    viewUnlockedEggs()
+    print("[Egg Unlock] Viewed all currently unlocked eggs")
+
+    -- Then check every 5 minutes ONLY if there are unviewed mastery eggs
+    while true do
+        task.wait(300)
+        if hasUnviewedMasteryEggs() then
+            local n = viewUnlockedEggs()
+            if n > 0 then
+                print("[Egg Unlock] Viewed " .. n .. " newly unlocked egg(s)")
+            end
+        end
+    end
+end)
+
+-- ══════════════════════════════════════════════════════════
+-- FRAMEWORK
+-- ══════════════════════════════════════════════════════════
+
+local Framework = nil
+task.spawn(function()
+    local ok, r = pcall(require, RS:WaitForChild("Framework", 15))
+    if ok and r then
+        Framework = r
+        while not Framework.Loaded do task.wait(0.1) end
+    end
+end)
+
+local function fw()      return (Framework and Framework.Loaded) and Framework or nil end
+local function getSave() local f = fw(); return f and f.Save and f.Save.Get and f.Save.Get() end
+
+local function getDB()
+    if _G.Framework and _G.Framework.Databases then return _G.Framework.Databases end
+    local f = fw()
+    if f and f.Databases then return f.Databases end
+    return nil
+end
+
+-- ══════════════════════════════════════════════════════════
+-- THREAD MANAGER
+-- ══════════════════════════════════════════════════════════
+
+local Threads = {}
+local function stopThread(k)      if Threads[k] then pcall(task.cancel, Threads[k]); Threads[k] = nil end end
+local function startThread(k, fn) stopThread(k); Threads[k] = task.spawn(fn) end
+
+-- ══════════════════════════════════════════════════════════
+-- HELPERS
+-- ══════════════════════════════════════════════════════════
+
+local function notify(t, c)
+    Rayfield:Notify({ Title = t, Content = c, Duration = 3, Image = 4483362458 })
+end
+
+local function getRoot()
+    local char = lp.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+
+local function tp(pos)
+    local root = getRoot()
+    if root then root.CFrame = CFrame.new(pos) end
+end
+
+local function pressKey(kc)
+    VIM:SendKeyEvent(true,  kc, false, game)
+    task.wait(0.008)
+    VIM:SendKeyEvent(false, kc, false, game)
+end
+
+local function useItem(name, amount)
+    local f = fw(); if not f then return end
+    pcall(function() f.Network.Invoke("Use Item", name, amount or 1) end)
+end
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 1 — AUTO HATCHER
+-- ══════════════════════════════════════════════════════════
+
+local HatchTab = Window:CreateTab("Auto Hatch", 4483362458)
+
+local function getEggNamesFromRS()
+    local g = RS:FindFirstChild("Game"); if not g then return {} end
+    local e = g:FindFirstChild("Eggs");  if not e then return {} end
+    local names = {}
+    for _, folder in ipairs(e:GetChildren()) do
+        for _, child in ipairs(folder:GetChildren()) do
+            table.insert(names, child.Name)
+        end
+    end
+    -- Add new Abstrax Egg if not already present (new update)
+    local hasAbstrax = false
+    for _, n in ipairs(names) do
+        if n == "Abstrax Egg" then hasAbstrax = true; break end
+    end
+    if not hasAbstrax then table.insert(names, "Abstrax Egg") end
+    table.sort(names)
+    return names
+end
+
+local eggNames = getEggNamesFromRS()
+if #eggNames == 0 then
+    task.spawn(function() task.wait(3); eggNames = getEggNamesFromRS() end)
+    eggNames = {"(Retry — reopen dropdown)"}
+end
+local selectedEgg = eggNames[1]
+
+HatchTab:CreateDropdown({
+    Name = "Select Egg",
+    Options = eggNames,
+    CurrentOption = {eggNames[1]},
+    MultipleOptions = false,
+    Flag = "HatchEgg",
+    Callback = function(opt) selectedEgg = type(opt)=="table" and opt[1] or opt end,
+})
+
+-- ── FLAG SLOTS ───────────────────────────────────────────
+
+local FLAG_OPTIONS = { "None", "Lucky Flag", "Ultra Lucky Flag", "Fortune Flag" }
+local hatchFlag1   = "None"
+local hatchFlag2   = "None"
+
+HatchTab:CreateDropdown({
+    Name = "Flag Slot 1",
+    Options = FLAG_OPTIONS,
+    CurrentOption = {"None"},
+    MultipleOptions = false,
+    Flag = "HatchFlag1",
+    Callback = function(opt) hatchFlag1 = type(opt)=="table" and opt[1] or opt end,
+})
+
+HatchTab:CreateDropdown({
+    Name = "Flag Slot 2",
+    Options = FLAG_OPTIONS,
+    CurrentOption = {"None"},
+    MultipleOptions = false,
+    Flag = "HatchFlag2",
+    Callback = function(opt) hatchFlag2 = type(opt)=="table" and opt[1] or opt end,
+})
+
+-- ── FLAG RE-PLACE INTERVALS ──────────────────────────────
+-- Timer values confirmed from decompile:
+--   Lucky Flag = timer 900, Ultra Lucky Flag = timer 900, Fortune Flag = timer 600
+-- User requested 29 min 30 sec option included
+
+local FLAG_INTERVAL_OPTIONS = {
+    "5 min",
+    "10 min",
+    "15 min",
+    "29 min 30 sec",
+    "30 min",
+    "45 min",
+    "1 hour",
+}
+local FLAG_INTERVAL_SECONDS = {
+    ["5 min"]         = 300,
+    ["10 min"]        = 600,
+    ["15 min"]        = 900,
+    ["29 min 30 sec"] = 1770,
+    ["30 min"]        = 1800,
+    ["45 min"]        = 2700,
+    ["1 hour"]        = 3600,
+}
+
+-- Per-slot interval (default 15 min)
+local flagSlotInterval = { [1] = 900, [2] = 900 }
+-- os.clock() when each slot was last placed
+local flagPlacedAt     = { [1] = 0,   [2] = 0   }
+
+HatchTab:CreateDropdown({
+    Name = "Flag Slot 1 — Re-place Interval",
+    Options = FLAG_INTERVAL_OPTIONS,
+    CurrentOption = {"15 min"},
+    MultipleOptions = false,
+    Flag = "FlagSlot1Interval",
+    Callback = function(opt)
+        local v = type(opt)=="table" and opt[1] or opt
+        flagSlotInterval[1] = FLAG_INTERVAL_SECONDS[v] or 900
+    end,
+})
+
+HatchTab:CreateDropdown({
+    Name = "Flag Slot 2 — Re-place Interval",
+    Options = FLAG_INTERVAL_OPTIONS,
+    CurrentOption = {"15 min"},
+    MultipleOptions = false,
+    Flag = "FlagSlot2Interval",
+    Callback = function(opt)
+        local v = type(opt)=="table" and opt[1] or opt
+        flagSlotInterval[2] = FLAG_INTERVAL_SECONDS[v] or 900
+    end,
+})
+
+-- ── HATCH LOGIC ──────────────────────────────────────────
+
+local hatchSetupDone = false
+local cachedEggPos   = nil
+
+local function isFlagExpired(slot, flagName)
+    if flagName == "None" then return false end
+    local elapsed = os.clock() - flagPlacedAt[slot]
+    -- Re-place 10s early to avoid coverage gaps
+    return elapsed >= (flagSlotInterval[slot] - 10)
+end
+
+local function placeFlag(slot, flagName, eggPos)
+    if flagName == "None" then return end
+    local offset = slot == 1 and Vector3.new(-6, 3, 0) or Vector3.new(6, 3, 0)
+    tp(eggPos + offset); task.wait(0.2)
+    useItem(flagName, 1); task.wait(0.2)
+    flagPlacedAt[slot] = os.clock()
+end
+
+local function setupHatch()
+    if not selectedEgg or selectedEgg == "(Retry — reopen dropdown)" then return end
+    local f = fw(); if not f then return end
+
+    local save = getSave()
+    if save and save.Settings then save.Settings.SkipLegendaryHatch = 1 end
+
+    local map        = f.WorldUtil and f.WorldUtil.GetMap and f.WorldUtil.GetMap(); if not map then return end
+    local eggsFolder = map:FindFirstChild("Eggs"); if not eggsFolder then return end
+    local eggModel   = eggsFolder:FindFirstChild(selectedEgg); if not eggModel then return end
+    local primary    = eggModel.PrimaryPart; if not primary then return end
+
+    cachedEggPos = primary.Position
+    tp(cachedEggPos + Vector3.new(0, 3, 4)); task.wait(0.3)
+
+    -- Place both flags on first setup
+    placeFlag(1, hatchFlag1, cachedEggPos)
+    placeFlag(2, hatchFlag2, cachedEggPos)
+
+    -- Return to hatch position
+    tp(cachedEggPos + Vector3.new(0, 3, 4)); task.wait(0.2)
+    hatchSetupDone = true
+end
+
+local function doHatch()
+    local f = fw(); if not f then return end
+    if not hatchSetupDone then
+        setupHatch(); if not hatchSetupDone then return end
+    end
+
+    -- Re-place expired flags without interrupting hatching
+    if cachedEggPos then
+        if isFlagExpired(1, hatchFlag1) then
+            placeFlag(1, hatchFlag1, cachedEggPos)
+            tp(cachedEggPos + Vector3.new(0, 3, 4)); task.wait(0.1)
+        end
+        if isFlagExpired(2, hatchFlag2) then
+            placeFlag(2, hatchFlag2, cachedEggPos)
+            tp(cachedEggPos + Vector3.new(0, 3, 4)); task.wait(0.1)
+        end
+    end
+
+    if f.Variables then f.Variables.OpeningEgg = false end
+    pressKey(Enum.KeyCode.T)
+end
+
+HatchTab:CreateToggle({
+    Name = "Auto Hatch",
+    CurrentValue = false,
+    Flag = "AutoHatch",
+    Callback = function(state)
+        if state then
+            hatchSetupDone    = false
+            cachedEggPos      = nil
+            flagPlacedAt      = { [1] = 0, [2] = 0 }
+            startThread("hatch", function()
+                while true do pcall(doHatch); task.wait(0.1) end
+            end)
+            notify("Auto Hatch", "Teleporting once, flags placed, pressing T")
+        else
+            stopThread("hatch")
+            hatchSetupDone = false
+            cachedEggPos   = nil
+            flagPlacedAt   = { [1] = 0, [2] = 0 }
+            notify("Auto Hatch", "Stopped.")
+        end
+    end,
+})
+
+HatchTab:CreateLabel("Flags auto-respawn per slot interval. Clears animation lock.")
+
+-- ── AUTO DELETE PETS ─────────────────────────────────────
+-- Remote confirmed from Cobalt: "auto delete pet" FireServer({ petId, variant, true })
+-- Abstrax Egg pet IDs from decompile:
+--   77=Withered Cat, 78=Withered Bear, 79=Crow, 80=Withering Wisp,
+--   81=Withering Feline, 82=Abstrax, 83=Wilting Rose, 84=Veiled Horologe
+
+local ALL_DELETE_PETS = {
+    -- Release Egg (IDs 66-76)
+    { id = "66", name = "Release Pet (50%)"    },
+    { id = "67", name = "Release Pet (35%)"    },
+    { id = "68", name = "Release Pet (16%)"    },
+    { id = "69", name = "Release Pet (0.1%)"   },
+    { id = "70", name = "Release Pet (0.01%)"  },
+    { id = "71", name = "Release Pet (0.1%) B" },
+    { id = "72", name = "Release Secret 1"     },
+    { id = "73", name = "Release Secret 2"     },
+    { id = "74", name = "Release Secret 3"     },
+    { id = "75", name = "Release Secret 4"     },
+    { id = "76", name = "Release Secret 5"     },
+    -- Abstrax Egg (IDs 77-84)
+    { id = "77", name = "Withered Cat"         },
+    { id = "78", name = "Withered Bear"        },
+    { id = "79", name = "Crow"                 },
+    { id = "80", name = "Withering Wisp"       },
+    { id = "81", name = "Withering Feline"     },
+    { id = "82", name = "Abstrax"              },
+    { id = "83", name = "Wilting Rose"         },
+    { id = "84", name = "Veiled Horologe"      },
+}
+
+local autoDeletePetIds  = {} -- selected pet IDs to delete
+local autoDeleteVariants = { normal = false, shiny = false }
+
+-- Build dropdown options: each pet as "Name (ID)"
+local PET_DELETE_OPTIONS = {}
+for _, pet in ipairs(ALL_DELETE_PETS) do
+    table.insert(PET_DELETE_OPTIONS, pet.name .. " (" .. pet.id .. ")")
+end
+
+HatchTab:CreateDropdown({
+    Name = "Auto-Delete Pets (multi-select)",
+    Options = PET_DELETE_OPTIONS,
+    CurrentOption = {},
+    MultipleOptions = true,
+    Flag = "AutoDeletePets",
+    Callback = function(opts)
+        autoDeletePetIds = {}
+        local selected = type(opts)=="table" and opts or {opts}
+        for _, opt in ipairs(selected) do
+            local id = opt:match("%((%d+)%)")
+            if id then table.insert(autoDeletePetIds, id) end
+        end
+        -- Real-time: if toggle is on, immediately fire delete for newly selected pets
+        if getgenv().AutoDeleteEnabled then
+            for _, petId in ipairs(autoDeletePetIds) do
+                pcall(fireAutoDelete, petId)
+            end
+        end
+    end,
+})
+
+-- Multi-select: can pick Normal, Shiny, or both
+HatchTab:CreateDropdown({
+    Name = "Delete Variant (multi-select)",
+    Options = { "normal", "shiny" },
+    CurrentOption = {"normal"},
+    MultipleOptions = true,
+    Flag = "AutoDeleteVariant",
+    Callback = function(opts)
+        autoDeleteVariants = { normal = false, shiny = false }
+        local selected = type(opts)=="table" and opts or {opts}
+        for _, v in ipairs(selected) do
+            if v == "normal" then autoDeleteVariants.normal = true end
+            if v == "shiny"  then autoDeleteVariants.shiny  = true end
+        end
+    end,
+})
+
+-- Auto-delete remote fires after each hatch via a listener
+local autoDeletePetRemote = nil
+task.spawn(function()
+    autoDeletePetRemote = RS:WaitForChild("Network"):WaitForChild("auto delete pet", 30)
+end)
+
+local function fireAutoDelete(petId)
+    if not autoDeletePetRemote then return end
+    if autoDeleteVariants.normal then
+        pcall(function() autoDeletePetRemote:FireServer({ petId, "normal", true }) end)
+    end
+    if autoDeleteVariants.shiny then
+        pcall(function() autoDeletePetRemote:FireServer({ petId, "shiny", true }) end)
+    end
+end
+
+-- Listen for hatches and auto-delete if toggle is on
+task.spawn(function()
+    local Network = RS:WaitForChild("Network", 15); if not Network then return end
+    local hatchedRemote = Network:WaitForChild("open egg", 15); if not hatchedRemote then return end
+    hatchedRemote.OnClientEvent:Connect(function()
+        if not getgenv().AutoDeleteEnabled then return end
+        if #autoDeletePetIds == 0 then return end
+        task.wait(0.5)
+        for _, petId in ipairs(autoDeletePetIds) do
+            pcall(fireAutoDelete, petId)
+        end
+    end)
+end)
+
+HatchTab:CreateToggle({
+    Name = "Auto Delete Selected Pets",
+    CurrentValue = false,
+    Flag = "AutoDelete",
+    Callback = function(state)
+        getgenv().AutoDeleteEnabled = state
+        if state then
+            -- Immediately fire for currently selected pets on enable
+            for _, petId in ipairs(autoDeletePetIds) do
+                pcall(fireAutoDelete, petId)
+            end
+            notify("Auto Delete", "ON — deletes selected pets on each hatch")
+        else
+            notify("Auto Delete", "OFF.")
+        end
+    end,
+})
+
+HatchTab:CreateLabel("Toggle on, select pets — deletes on every hatch in real time")
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 2 — AUTO BOOSTS (next to Auto Hatch)
+-- ══════════════════════════════════════════════════════════
+
+local BoostTab = Window:CreateTab("Auto Boosts", 4483362458)
+
+local ALL_BOOST_NAMES = {
+    "Coins I","Coins II","Coins III","Coins IV",
+    "Gems I","Gems II","Gems III","Gems IV",
+    "Luck I","Luck II","Luck III","Luck IV","Luck V","Luck VI","Luck X",
+    "Lucky","Ultra Lucky",
+    "Damage I","Damage II","Damage III","Damage IV","Damage V","Damage VI","Damage X",
+    "Shiny I","Shiny II","Shiny III","Shiny IV","Shiny V","Shiny VI","Shiny X",
+    "Hatch I","Hatch II","Hatch III","Hatch IV","Hatch V","Hatch VI","Hatch X",
+    "Fast Hatch",
+}
+
+local function getBoostNames()
+    local db = getDB()
+    if db and db.Boosts then
+        local names, seen = {}, {}
+        for name, _ in pairs(db.Boosts) do
+            if not seen[name] then table.insert(names, name); seen[name]=true end
+        end
+        table.sort(names)
+        if #names > 0 then return names end
+    end
+    return ALL_BOOST_NAMES
+end
+
+local boostNames     = getBoostNames()
+local selectedBoosts = {}
+local useAllBoosts   = false
+
+local activateBoostRemote = nil
+task.spawn(function()
+    activateBoostRemote = RS:WaitForChild("Network"):WaitForChild("activate boost", 30)
+end)
+
+task.spawn(function()
+    for _ = 1, 150 do
+        task.wait(0.2)
+        local db = getDB()
+        if db and db.Boosts then
+            boostNames = getBoostNames()
+            return
+        end
+    end
+end)
+
+BoostTab:CreateDropdown({
+    Name = "Select Boosts (multi-select)",
+    Options = boostNames,
+    CurrentOption = {},
+    MultipleOptions = true,
+    Flag = "SelectedBoosts",
+    Callback = function(opts)
+        selectedBoosts = type(opts)=="table" and opts or {opts}
+    end,
+})
+
+BoostTab:CreateToggle({
+    Name = "Use ALL Boosts in Inventory",
+    CurrentValue = false,
+    Flag = "UseAllBoosts",
+    Callback = function(state)
+        useAllBoosts = state
+        notify("Auto Boosts", state and "Will use every boost you own" or "Back to selected boosts only")
+    end,
+})
+
+BoostTab:CreateDivider()
+
+local function fireBoost(boostName)
+    if not activateBoostRemote then return end
+    pcall(function() activateBoostRemote:FireServer({ boostName }) end)
+    local boostActivated    = RS.Network:FindFirstChild("boost activated")
+    local consumableUsedVFX = RS.Network:FindFirstChild("consumable used vfx")
+    if boostActivated then
+        pcall(function() firesignal(boostActivated.OnClientEvent, { lp, boostName }) end)
+    end
+    if consumableUsedVFX then
+        pcall(function() firesignal(consumableUsedVFX.OnClientEvent, { lp, boostName }) end)
+    end
+end
+
+local function doUseBoosts()
+    local save = getSave(); if not save then return end
+    local inventory = save.BoostsInventory or {}
+    if useAllBoosts then
+        for boostName, count in pairs(inventory) do
+            if (tonumber(count) or 0) > 0 then
+                fireBoost(boostName)
+                task.wait(0.1)
+            end
+        end
+    else
+        for _, boostName in ipairs(selectedBoosts) do
+            if (tonumber(inventory[boostName] or 0) or 0) > 0 then
+                fireBoost(boostName)
+                task.wait(0.1)
+            end
+        end
+    end
+end
+
+BoostTab:CreateToggle({
+    Name = "Auto Use Boosts (loop every 1s)",
+    CurrentValue = false,
+    Flag = "AutoBoost",
+    Callback = function(state)
+        if state then
+            startThread("boosts", function()
+                while true do pcall(doUseBoosts); task.wait(1) end
+            end)
+            notify("Auto Boosts", useAllBoosts and "Using ALL boosts" or (#selectedBoosts .. " selected"))
+        else
+            stopThread("boosts")
+            notify("Auto Boosts", "Stopped.")
+        end
+    end,
+})
+
+BoostTab:CreateButton({
+    Name = "Use Boosts Once Now",
+    Callback = function()
+        pcall(doUseBoosts)
+        notify("Auto Boosts", "Done.")
+    end,
+})
+
+BoostTab:CreateLabel("Remote: 'activate boost' FireServer({ boostName })")
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 3 — AUTO SPIN
+-- ══════════════════════════════════════════════════════════
+
+local SpinTab = Window:CreateTab("Auto Spin", 4483362458)
+
+local spinConn     = nil
+local spinBusy     = false
+
+local function doSpin()
+    if spinBusy then return end
+    spinBusy = true
+
+    local f = fw()
+    if not f then spinBusy = false; return end
+
+    -- Check we have spins available
+    local save = getSave()
+    local osTime = f.Network.Invoke("Get OSTime") or os.time()
+    local spins  = save and (tonumber(save.PrizeWheelSpins) or 0) or 0
+    local freeIn = save and save.PrizeWheelTime and (save.PrizeWheelTime - osTime) or 0
+    if spins <= 0 and freeIn > 0 then
+        spinBusy = false
+        return
+    end
+
+    -- Invoke "Spin Prize Wheel" — RemoteFunction, framework wraps in CreatePacket
+    local result = f.Network.Invoke("Spin Prize Wheel")
+
+    if typeof(result) == "table" and result.success then
+        -- Immediately fire "Prize Wheel Done" to skip the 4s animation
+        pcall(function() f.Network.Fire("Prize Wheel Done") end)
+    elseif typeof(result) == "table" and result.reason then
+        -- No spins or already spinning — stop
+        if result.reason == "No spins available" then
+            stopThread("spin")
+            notify("Auto Spin", "No spins remaining — stopped.")
+        end
+    end
+
+    spinBusy = false
+end
+
+SpinTab:CreateToggle({
+    Name = "Auto Spin Wheel",
+    CurrentValue = false,
+    Flag = "AutoSpin",
+    Callback = function(state)
+        if state then
+            spinBusy = false
+            -- Run on Heartbeat for fastest possible repeat
+            if spinConn then spinConn:Disconnect(); spinConn = nil end
+            spinConn = RunSvc.Heartbeat:Connect(function()
+                pcall(doSpin)
+            end)
+            notify("Auto Spin", "Started — spins on Heartbeat, skips animation")
+        else
+            if spinConn then spinConn:Disconnect(); spinConn = nil end
+            spinBusy = false
+            notify("Auto Spin", "Stopped.")
+        end
+    end,
+})
+
+SpinTab:CreateLabel("Invokes 'Spin Prize Wheel', immediately fires 'Prize Wheel Done' to skip")
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 3 — AUTO MERCHANT
+-- ══════════════════════════════════════════════════════════
+
+local MerchTab         = Window:CreateTab("Merchant", 4483362458)
+local merchOn          = false
+local isBuying         = false
+local currentSlotCount = 0
+
+-- Confirmed from Cobalt: "buy merchant item" RemoteFunction InvokeServer({ slotIndex })
+-- Result: { true } = success, anything else = stop
+local buyMerchantRemote = nil
+task.spawn(function()
+    buyMerchantRemote = RS:WaitForChild("Network"):WaitForChild("buy merchant item", 30)
+end)
+
+local function buySlotUntilEmpty(slot)
+    local bought = 0
+    while true do
+        local ok, result = pcall(function()
+            return buyMerchantRemote:InvokeServer({ slot })
+        end)
+        if not ok then break end
+        if type(result) ~= "table" then break end
+        if result[1] ~= true then break end
+        bought = bought + 1
+        task.wait(0.1)
+    end
+    return bought
+end
+
+local function buyAll()
+    if isBuying then return end
+    if not buyMerchantRemote then return end
+    isBuying = true
+
+    local totalSlots = currentSlotCount > 0 and currentSlotCount or 10
+    local anyBought  = false
+
+    for slot = 1, totalSlots do
+        local bought = buySlotUntilEmpty(slot)
+        if bought > 0 then
+            anyBought = true
+            notify("Merchant", "Slot " .. slot .. " — bought x" .. bought)
+        end
+        task.wait(0.2)
+    end
+
+    if not anyBought then
+        print("[Merchant] Nothing to buy this cycle")
+    end
+
+    isBuying = false
+end
+
+-- Listen for new merchant spawns to get slot count
+task.spawn(function()
+    local Network = RS:WaitForChild("Network", 15); if not Network then return end
+    local sr = Network:WaitForChild("update merchant stock", 15); if not sr then return end
+    sr.OnClientEvent:Connect(function(payload)
+        local stock = nil
+        if type(payload) == "table" then
+            local first = payload[1]
+            stock = (type(first)=="table" and type(first[1])=="table") and first
+                 or (type(first)=="table" and first.uid) and payload
+                 or first or payload
+        end
+        stock            = stock or {}
+        currentSlotCount = #stock
+        if merchOn then task.spawn(buyAll) end
+    end)
+end)
+
+MerchTab:CreateToggle({
+    Name = "Auto Buy Merchant (every 60s)",
+    CurrentValue = false,
+    Flag = "AutoMerchant",
+    Callback = function(state)
+        merchOn = state
+        if state then
+            startThread("merchant", function()
+                while true do
+                    task.spawn(buyAll)
+                    task.wait(60)
+                end
+            end)
+            notify("Merchant", "Started — buying max every 60s")
+        else
+            stopThread("merchant")
+            isBuying = false
+            notify("Merchant", "Stopped.")
+        end
+    end,
+})
+
+MerchTab:CreateButton({
+    Name = "Buy Now",
+    Callback = function()
+        task.spawn(buyAll)
+        notify("Merchant", "Buying all slots now...")
+    end,
+})
+
+MerchTab:CreateLabel("Buys max of every slot — InvokeServer({ slotIndex }) confirmed")
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 4 — AUTO FARM (Breakables + Pickup Magnet)
+-- ══════════════════════════════════════════════════════════
+
+local FarmTab = Window:CreateTab("Auto Farm", 4483362458)
+
+-- ── BREAKABLES (GEM PICKUPS ONLY) ───────────────────────
+
+local Network       = RS:WaitForChild("Network")
+local ClickPickup   = Network:WaitForChild("click pickup")
+local CollectPickup = Network:WaitForChild("collect pickup")
+local MagnetPickup  = Network:WaitForChild("magnet pickup")
+local DamagePickup  = nil
+task.spawn(function()
+    DamagePickup = Network:WaitForChild("damage pickup", 30)
+end)
+
+-- Zones in exact order — always starts at Spawn
+-- Exact coordinates provided by user
+local FARM_ZONES = {
+    { name = "Spawn",          pos = Vector3.new(-2038.67, 59.85,    -540.05) },
+    { name = "Sky Island",     pos = Vector3.new(-2163.34, 1606.11,  -469.19) },
+    { name = "Deserted Oasis", pos = Vector3.new(-2126.50, 6490.27,  -505.22) },
+    { name = "Frosty Peaks",   pos = Vector3.new(-2126.50, 6490.27,  -505.22) },
+    { name = "Lunar Isle",        pos = Vector3.new(-2250.50, 19577.16, -520.05) },
+    { name = "Abyssal Void",      pos = Vector3.new(-2248.41, 28796.54, -502.92) },
+    { name = "Withered Courtyard",pos = Vector3.new(-2185.92, 38237.89, -491.79) },
+}
+
+local function isGemPickup(pickup)
+    for _, child in ipairs(pickup:GetChildren()) do
+        if child.Name:lower():find("gem") then
+            return true
+        end
+    end
+    return false
+end
+
+local function getGemPickups()
+    local pickupsFolder = workspace:FindFirstChild("Visual")
+        and workspace.Visual:FindFirstChild("Instances")
+        and workspace.Visual.Instances:FindFirstChild("Pickups")
+    if not pickupsFolder then return {} end
+
+    local result = {}
+    for _, pickup in ipairs(pickupsFolder:GetChildren()) do
+        if not pickup.Parent then continue end
+        if not isGemPickup(pickup) then continue end
+        local pos = pickup:FindFirstChild("POS")
+        if not pos then continue end
+        if not pickup:GetAttribute("HasLanded") then continue end
+        table.insert(result, { pickup = pickup, pos = pos })
+    end
+    return result
+end
+
+local function handleBreakablePickup(pickup, pos)
+    local root = getRoot(); if not root then return end
+    local id = pickup.Name
+
+    root.CFrame = pos.CFrame + Vector3.new(0, 3, 0)
+    task.wait(0.15)
+
+    pcall(function() CollectPickup:FireServer(id, pos.Position) end)
+    pcall(function() ClickPickup:FireServer({ id }) end)
+    pcall(function() MagnetPickup:FireServer(id) end)
+
+    -- Keep hammering until crate is confirmed gone (pickup.Parent == nil)
+    -- Timeout increased to 30s in case a crate has high health
+    local timeout = os.clock() + 30
+    while pickup.Parent ~= nil and os.clock() < timeout do
+        if DamagePickup then
+            pcall(function() DamagePickup:FireServer(id, 34, false, 1) end)
+        end
+        pcall(function() ClickPickup:FireServer({ id }) end)
+        pcall(function() CollectPickup:FireServer(id, pos.Position) end)
+        task.wait(0.08)
+    end
+
+    -- No artificial delay — only move on once crate is confirmed broken
+end
+
+-- Reference to the auto break toggle so we can turn it off
+local autoBreakToggleRef = nil
+
+local function doBreakableLoop()
+    for zoneIndex, zone in ipairs(FARM_ZONES) do
+        -- Step 1: Teleport to zone FIRST
+        tp(zone.pos + Vector3.new(0, 3, 0))
+        notify("Auto Break", "Arrived at " .. zone.name .. " — waiting 5s for gems to spawn...")
+        print("[Farm] Teleported to " .. zone.name .. " — waiting 5s")
+
+        -- Step 2: Wait 5 seconds for breakables/pickups to spawn in
+        task.wait(5)
+
+        -- Step 3: Keep processing gems in this zone until none left
+        while true do
+            local gems = getGemPickups()
+            if #gems == 0 then
+                print("[Farm] No gems left in " .. zone.name .. " — moving to next zone")
+                notify("Auto Break", zone.name .. " cleared — moving on")
+                break
+            end
+
+            for _, entry in ipairs(gems) do
+                if entry.pickup and entry.pickup.Parent then
+                    handleBreakablePickup(entry.pickup, entry.pos)
+                end
+            end
+        end
+    end
+
+    -- All zones exhausted — turn off the toggle
+    notify("Auto Break", "All zones cleared — stopping.")
+    print("[Farm] All zones empty — disabling auto break")
+    if autoBreakToggleRef then
+        pcall(function() autoBreakToggleRef:Set(false) end)
+    end
+    stopThread("breakables")
+end
+
+autoBreakToggleRef = FarmTab:CreateToggle({
+    Name = "Auto Break Gem Crates",
+    CurrentValue = false,
+    Flag = "AutoBreak",
+    Callback = function(state)
+        if state then
+            startThread("breakables", function()
+                pcall(doBreakableLoop)
+            end)
+            notify("Auto Break", "Starting at Spawn — cycles all zones, stops when empty")
+        else
+            stopThread("breakables")
+            notify("Auto Break", "Stopped.")
+        end
+    end,
+})
+
+FarmTab:CreateLabel("Spawn → Sky → Oasis → Frosty → Lunar → Void | 2s between breaks | Auto-off when done")
+FarmTab:CreateDivider()
+FarmTab:CreateLabel("Uses click/collect/magnet/damage remotes — gems only")
+
+FarmTab:CreateDivider()
+
+-- ── PICKUP MAGNET ────────────────────────────────────────
+
+local CURRENCY_PICKUP_NAMES = {
+    ["small coin"]         = true, ["medium coins"]       = true,
+    ["large coins"]        = true, ["small gem"]          = true,
+    ["large gems"]         = true, ["space small coin"]   = true,
+    ["space medium coins"] = true, ["space large coins"]  = true,
+    ["space small gem"]    = true, ["space large gems"]   = true,
+    ["void small coin"]    = true, ["void medium coins"]  = true,
+    ["void large coins"]   = true, ["void small gem"]     = true,
+    ["void large gems"]    = true, ["heart"]              = true,
+    ["bag of hearts"]      = true, ["pile of hearts"]     = true,
+}
+
+local magnetConn    = nil
+local magnetEnabled = false
+local MAGNET_SPEED  = 120
+
+local function startMagnet()
+    if magnetConn then magnetConn:Disconnect(); magnetConn = nil end
+    magnetConn = RunSvc.Heartbeat:Connect(function(dt)
+        if not magnetEnabled then return end
+        local root = getRoot(); if not root then return end
+        local rootPos = root.Position
+        for _, obj in ipairs(workspace:GetDescendants()) do
+            if obj:IsA("Model") and CURRENCY_PICKUP_NAMES[obj.Name:lower()] then
+                local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
+                if part then
+                    local dist = (part.Position - rootPos).Magnitude
+                    if dist > 1 then
+                        local dir    = (rootPos - part.Position).Unit
+                        local move   = math.min(MAGNET_SPEED * dt, dist)
+                        local newPos = part.Position + dir * move
+                        pcall(function()
+                            if obj.PrimaryPart then obj:PivotTo(CFrame.new(newPos))
+                            else part.CFrame = CFrame.new(newPos) end
+                        end)
+                    end
+                end
+            end
+        end
+    end)
+end
+
+local function stopMagnet()
+    magnetEnabled = false
+    if magnetConn then magnetConn:Disconnect(); magnetConn = nil end
+end
+
+FarmTab:CreateToggle({
+    Name = "Coin/Gem Pickup Magnet",
+    CurrentValue = false,
+    Flag = "AutoPickup",
+    Callback = function(state)
+        magnetEnabled = state
+        if state then startMagnet(); notify("Pickup Magnet", "ON — pickups sliding to you")
+        else stopMagnet(); notify("Pickup Magnet", "OFF.") end
+    end,
+})
+
+FarmTab:CreateLabel("Pulls all coin/gem/heart pickup Models toward you — you stay still")
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 5 — AUTO REBIRTH
+-- ══════════════════════════════════════════════════════════
+
+local RebirthTab = Window:CreateTab("Auto Rebirth", 4483362458)
+
+local function getRebirthCost(cur, amt)
+    local function sc(n) local s = n*(n+1)/2; return s*s end
+    return 100 * (sc(cur+amt) - sc(cur))
+end
+
+local function getMaxAffordable(cur, bubbles)
+    if getRebirthCost(cur, 1) > bubbles then return 0 end
+    local lo, hi = 1, 1
+    while getRebirthCost(cur, hi) <= bubbles do hi = hi * 2 end
+    while lo < hi do
+        local mid = math.floor((lo+hi+1)/2)
+        if getRebirthCost(cur, mid) <= bubbles then lo = mid else hi = mid-1 end
+    end
+    return lo
+end
+
+-- Confirmed from Cobalt: "buy rebirth" RemoteFunction, InvokeServer({ amount })
+local buyRebirthRemote = nil
+task.spawn(function()
+    buyRebirthRemote = RS:WaitForChild("Network"):WaitForChild("buy rebirth", 30)
+end)
+
+local rebirthAmt = 1
+RebirthTab:CreateDropdown({
+    Name = "Rebirth Amount",
+    Options = { "1", "5", "10", "25", "50", "100", "Max" },
+    CurrentOption = {"1"},
+    MultipleOptions = false,
+    Flag = "RebirthAmt",
+    Callback = function(opt)
+        local v = type(opt)=="table" and opt[1] or opt
+        rebirthAmt = (v=="Max") and "Max" or (tonumber(v) or 1)
+    end,
+})
+
+local function doRebirth()
+    local save = getSave(); if not save then return end
+
+    local cur     = tonumber(save.Rebirths or 0) or 0
+    local bubbles = tonumber(save.Bubbles  or 0) or 0
+    local amt     = rebirthAmt=="Max" and getMaxAffordable(cur, bubbles) or rebirthAmt
+    if not amt or amt <= 0 then return end
+    if bubbles < getRebirthCost(cur, amt) then return end
+    if not buyRebirthRemote then return end
+
+    -- Confirmed from Cobalt: InvokeServer({ amount })
+    pcall(function()
+        buyRebirthRemote:InvokeServer({ amt })
+    end)
+end
+
+RebirthTab:CreateToggle({
+    Name = "Auto Rebirth (when affordable)",
+    CurrentValue = false,
+    Flag = "AutoRebirth",
+    Callback = function(state)
+        if state then
+            startThread("rebirth", function()
+                while true do pcall(doRebirth); task.wait(0.5) end
+            end)
+            notify("Auto Rebirth", "Started.")
+        else
+            stopThread("rebirth")
+            notify("Auto Rebirth", "Stopped.")
+        end
+    end,
+})
+
+RebirthTab:CreateLabel("Remote: 'buy rebirth' InvokeServer({ amount })")
+
+-- ══════════════════════════════════════════════════════════
+-- SKILL TREE (inside Rebirth tab)
+-- Remote: "buy skill tree knot" InvokeServer({ knotName }) — confirmed Cobalt
+-- Currency: RebirthTokens (from save.RebirthTokens)
+-- Priority order confirmed by user, then all Eggs tree knots
+-- ══════════════════════════════════════════════════════════
+
+-- Ordered knots to buy first (user-specified priority)
+-- Knot names confirmed: Cobalt used "Start Skill Tree" for Walk Speed I
+-- The server accepts the v14 node names directly (from decompile lines 25314-25420)
+-- Two fixes vs previous version:
+--   1. Correct key names matching v14 array
+--   2. Do NOT stop on cantafford in priority — skip and continue to buy
+--      cheaper knots that are still affordable
+local SKILL_TREE_PRIORITY = {
+    "Walk Speed I",    -- Start Skill Tree (free)
+    "More Jumps I",    -- Hatch Tempo I    (2 tokens)
+    "Eggs Portal",     -- Eggs Upgrades    (price varies)
+    "Walk Speed II",   -- Bubble Power I   (3 tokens)
+    "Walk Speed III",  -- Bubble Power II  (7 tokens)
+    "Magnet Range I",  -- Magnet Range I   (2 tokens)
+    "More Storage I",  -- More Storage I   (price varies)
+    "More Storage II", -- More Storage II
+    "Extra Pet Equip", -- Extra Pet Equip  (350 tokens)
+    "Extra Lucky I",   -- Extra Lucky I
+    "More Storage III",-- More Storage III
+    "Extra Lucky II",  -- Extra Lucky II
+    "Extra Lucky III", -- Extra Lucky III
+}
+
+local EGGS_TREE_KNOTS = {
+    "Double Hatch Chance",
+    "Lucky Common Eggs",
+    "Lucky Rare Eggs",
+    "Lucky Epic Eggs",
+    "Faster Hatch I",
+    "Faster Hatch II",
+    "Faster Hatch III",
+    "Egg Slots I",
+    "Egg Slots II",
+    "Egg Slots III",
+    "Pity Boost I",
+    "Pity Boost II",
+    "Offline Cost Reducer",
+    "Offline Hatch Speed I",
+    "Offline Hatch Speed II",
+    "More Jumps II",
+    "More Jumps III",
+    "Shiny Egg Boost I",
+    "Shiny Egg Boost II",
+    "Egg Apprentice",
+    "Egg Master",
+}
+
+local buyKnotRemote = nil
+task.spawn(function()
+    buyKnotRemote = RS:WaitForChild("Network"):WaitForChild("buy skill tree knot", 30)
+end)
+
+-- Track owned knots locally — reset on toggle
+-- Server returns { true } = bought, { false } = owned OR can't afford
+-- We distinguish by checking token balance before attempting
+local ownedKnots = {}
+
+local function getRebirthTokens()
+    local save = getSave(); if not save then return 0 end
+    return tonumber(save.RebirthTokens or save.rebirthTokens or 0) or 0
+end
+
+local function getKnotPrice(knotName)
+    local db = getDB(); if not db or not db.SkillTree then return math.huge end
+    local data = db.SkillTree[knotName]
+    if not data then return math.huge end
+    return tonumber(data.price or 0) or 0
+end
+
+-- Returns: "owned", "bought", "cantafford", "failed"
+local function tryBuyKnot(knotName)
+    if ownedKnots[knotName] then return "owned" end
+    if not buyKnotRemote then return "failed" end
+
+    local tokens = getRebirthTokens()
+    local price  = getKnotPrice(knotName)
+
+    -- If price is math.huge, DB doesn't have this knot — try anyway
+    -- If price known and can't afford, skip
+    if price ~= math.huge and price > 0 and tokens < price then
+        return "cantafford"
+    end
+
+    local ok, result = pcall(function()
+        return buyKnotRemote:InvokeServer({ knotName })
+    end)
+
+    if ok and type(result) == "table" and result[1] == true then
+        ownedKnots[knotName] = true
+        notify("Skill Tree", "✓ " .. knotName)
+        print("[SkillTree] Bought: " .. knotName)
+        return "bought"
+    end
+
+    -- Server returned false:
+    -- If we had enough tokens (or free), it means already owned
+    -- If we didn't have tokens, it means can't afford
+    if price == 0 or price == math.huge or tokens >= price then
+        ownedKnots[knotName] = true -- mark owned so we don't retry
+        return "owned"
+    end
+
+    return "cantafford"
+end
+
+-- Returns true = all done, false = stopped (can't afford), nil = retry after rebirth
+local function doSkillTree()
+    -- Phase 1: priority knots — skip unaffordable, buy what we can
+    -- Do NOT stop on cantafford — a later knot may be cheaper
+    local anyPriorityLeft = false
+    for _, knotName in ipairs(SKILL_TREE_PRIORITY) do
+        if not ownedKnots[knotName] then
+            local result = tryBuyKnot(knotName)
+            if result == "cantafford" then
+                anyPriorityLeft = true -- still have unowned knots we can't afford yet
+            elseif result == "bought" then
+                task.wait(0.3)
+            end
+            -- "owned"/"failed" — continue to next
+        end
+    end
+    if anyPriorityLeft then
+        return false -- some priority knots still unaffordable, retry after rebirth
+    end
+
+    -- Phase 2: Eggs tree — buy any affordable, skip unaffordable
+    local boughtAny = true
+    while boughtAny do
+        boughtAny = false
+        local allOwned = true
+        for _, knotName in ipairs(EGGS_TREE_KNOTS) do
+            if not ownedKnots[knotName] then
+                allOwned = false
+                local result = tryBuyKnot(knotName)
+                if result == "bought" then
+                    boughtAny = true
+                    task.wait(0.3)
+                end
+            end
+        end
+        if allOwned then return true end -- all done
+    end
+
+    return nil -- made a pass but nothing bought, retry after rebirth
+end
+
+RebirthTab:CreateDivider()
+
+RebirthTab:CreateToggle({
+    Name = "Auto Skill Tree",
+    CurrentValue = false,
+    Flag = "AutoSkillTree",
+    Callback = function(state)
+        if state then
+            ownedKnots = {}
+            startThread("skilltree", function()
+                while true do
+                    local ok, result = pcall(doSkillTree)
+                    if ok and result == true then
+                        notify("Skill Tree", "All knots purchased!")
+                        print("[SkillTree] Complete — all knots owned")
+                        stopThread("skilltree")
+                        pcall(function()
+                            if Rayfield.Flags and Rayfield.Flags.AutoSkillTree then
+                                Rayfield.Flags.AutoSkillTree:Set(false)
+                            end
+                        end)
+                        return
+                    end
+                    task.wait(3) -- wait before retrying
+                end
+            end)
+            notify("Skill Tree", "Started")
+        else
+            stopThread("skilltree")
+            notify("Skill Tree", "Stopped.")
+        end
+    end,
+})
+
+RebirthTab:CreateButton({
+    Name = "Buy Skill Tree Once Now",
+    Callback = function()
+        task.spawn(doSkillTree)
+        notify("Skill Tree", "Attempting to buy available knots...")
+    end,
+})
+
+RebirthTab:CreateLabel("Priority → Eggs Tree | Stops when unaffordable | Retries after rebirth")
+
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 6 — AUTO ITEMS / POTIONS
+-- Remote: f.Network.Invoke("Use Item", name, amount) — line 10393
+-- Reads _G.Framework.Databases directly (line 36314)
+-- ══════════════════════════════════════════════════════════
+
+local ItemTab = Window:CreateTab("Auto Items", 4483362458)
+
+local USABLE_CATS = { Consumables=true, Fruits=true, Treats=true, Potions=true }
+
+local selectedItem  = nil
+local itemUseAmount = 1
+
+local function buildItemList()
+    local db = getDB(); if not db then return {} end
+    local names, seen = {}, {}
+    if db.Items then
+        for name, data in pairs(db.Items) do
+            if type(data)=="table"
+               and not data.crafting  and not data.special
+               and not data.flag      and not data.droppable
+               and not data.petCube   and not data.tradable
+               and (USABLE_CATS[data.category or ""]
+                    or data.duration  or data.fruit or data.Treat) then
+                if not seen[name] then table.insert(names, name); seen[name]=true end
+            end
+        end
+    end
+    if db.Potions then
+        for name, _ in pairs(db.Potions) do
+            if not seen[name] then table.insert(names, name); seen[name]=true end
+        end
+    end
+    table.sort(names)
+    return names
+end
+
+local itemNames = buildItemList()
+if #itemNames == 0 then
+    task.spawn(function()
+        for _ = 1, 300 do
+            task.wait(0.2)
+            itemNames = buildItemList()
+            if #itemNames > 0 then
+                selectedItem = itemNames[1]
+                notify("Auto Items", #itemNames .. " items loaded! Open dropdown.")
+                return
+            end
+        end
+        notify("Auto Items", "DB never became available.")
+    end)
+else
+    selectedItem = itemNames[1]
+end
+
+local itemDropOpts = #itemNames > 0 and itemNames or {"(Waiting for DB...)"}
+
+ItemTab:CreateDropdown({
+    Name = "Select Item / Potion",
+    Options = itemDropOpts,
+    CurrentOption = {itemDropOpts[1]},
+    MultipleOptions = false,
+    Flag = "SelectedItem",
+    Callback = function(opt) selectedItem = type(opt)=="table" and opt[1] or opt end,
+})
+
+ItemTab:CreateDropdown({
+    Name = "Amount to Use",
+    Options = { "1", "5", "10", "25", "All" },
+    CurrentOption = {"1"},
+    MultipleOptions = false,
+    Flag = "ItemAmount",
+    Callback = function(opt)
+        local v = type(opt)=="table" and opt[1] or opt
+        itemUseAmount = (v=="All") and "All" or (tonumber(v) or 1)
+    end,
+})
+
+local function resolveItemAmount()
+    if itemUseAmount ~= "All" then return itemUseAmount end
+    local save = getSave()
+    if save and save.Items then
+        for _, e in ipairs(save.Items) do
+            if e.name == selectedItem then return e.amount or 1 end
+        end
+    end
+    return 1
+end
+
+local function doUseItem()
+    if not selectedItem or selectedItem == "(Waiting for DB...)" then return end
+    local db = getDB(); if not db then return end
+    if not (db.Items and db.Items[selectedItem])
+       and not (db.Potions and db.Potions[selectedItem]) then return end
+    local f = fw(); if not f then return end
+    pcall(function() f.Network.Invoke("Use Item", selectedItem, resolveItemAmount()) end)
+end
+
+ItemTab:CreateToggle({
+    Name = "Auto Use (loop every 1s)",
+    CurrentValue = false,
+    Flag = "AutoItem",
+    Callback = function(state)
+        if state then
+            startThread("items", function()
+                while true do pcall(doUseItem); task.wait(1) end
+            end)
+            notify("Auto Items", "Using: " .. (selectedItem or "none selected"))
+        else
+            stopThread("items"); notify("Auto Items", "Stopped.")
+        end
+    end,
+})
+
+ItemTab:CreateButton({
+    Name = "Use Once Now",
+    Callback = function()
+        pcall(doUseItem)
+        notify("Auto Items", "Used: " .. (selectedItem or "none"))
+    end,
+})
+
+ItemTab:CreateButton({
+    Name = "Reload Item List",
+    Callback = function()
+        local list = buildItemList()
+        if #list > 0 then
+            itemNames = list; selectedItem = list[1]
+            notify("Auto Items", #list .. " items loaded! Reopen dropdown.")
+        else
+            notify("Auto Items", "DB not ready — wait a moment.")
+        end
+    end,
+})
+
+ItemTab:CreateLabel("Remote: Network.Invoke('Use Item', name, amount)")
+
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 8 — FLAGS (standalone auto-placer)
+-- ══════════════════════════════════════════════════════════
+
+local FLAG_FALLBACK    = { "Lucky Flag", "Ultra Lucky Flag", "Fortune Flag" }
+local selectedFlagItem = FLAG_FALLBACK[1]
+local flagInterval     = 60
+
+local function getFlagNames()
+    local db = getDB()
+    if not db or not db.Items then return FLAG_FALLBACK end
+    local names = {}
+    for name, data in pairs(db.Items) do
+        if type(data)=="table" and data.flag==true then table.insert(names, name) end
+    end
+    table.sort(names)
+    return #names > 0 and names or FLAG_FALLBACK
+end
+
+local flagNames = getFlagNames()
+
+task.spawn(function()
+    for _ = 1, 75 do
+        task.wait(0.2)
+        local names = getFlagNames()
+        if #names > 0 and names[1] ~= FLAG_FALLBACK[1] then
+            flagNames = names; selectedFlagItem = names[1]; return
+        end
+    end
+end)
+
+-- ══════════════════════════════════════════════════════════
+-- TAB 9 — AUTO WORLD (Zones + Chests)
+-- ══════════════════════════════════════════════════════════
+
+local WorldTab = Window:CreateTab("Auto World", 4483362458)
+
+-- Zone names confirmed from decompile (lines 44150-44177)
+local ZONE_NAMES = {
+    "Sky Island",
+    "Deserted Oasis",
+    "Frosty Peaks",
+    "Lunar Isle",
+    "Abyssal Void",
+    "Withered Courtyard",
+}
+
+-- Updated teleport coords provided by user
+local ZONE_UNLOCK_POS = Vector3.new(-2185.92, 38237.89, -491.79)
+
+local function doUnlockZones()
+    -- Teleport to unlock position
+    tp(ZONE_UNLOCK_POS + Vector3.new(0, 3, 0))
+    task.wait(2)
+
+    -- Confirmed from Cobalt: "unlock map portal" InvokeServer({ zoneName })
+    local unlockRemote = RS.Network:WaitForChild("unlock map portal", 10)
+    local vfxRemote    = RS.Network:FindFirstChild("map portal unlocked")
+
+    for _, zoneName in ipairs(ZONE_NAMES) do
+        if unlockRemote then
+            pcall(function()
+                unlockRemote:InvokeServer({ zoneName })
+            end)
+        end
+        if vfxRemote then
+            pcall(function()
+                firesignal(vfxRemote.OnClientEvent, { zoneName })
+            end)
+        end
+        task.wait(0.5)
+    end
+
+    notify("Zones", "All zones unlocked!")
+end
+
+WorldTab:CreateButton({
+    Name = "Unlock All Zones Now",
+    Callback = function()
+        task.spawn(doUnlockZones)
+        notify("Zones", "Teleporting and unlocking all portals...")
+    end,
+})
+
+WorldTab:CreateLabel("Teleports to zone area then unlocks all portals")
+WorldTab:CreateDivider()
+
+-- ── CHESTS ───────────────────────────────────────────────
+-- Teleports to each chest, collects, then returns to egg stand if hatching
+-- Timer read from workspace.Map.Activations[name].ChestTimer.Title.Text
+
+local ALL_CHESTS = {
+    "Sky Chest",
+    "Frosty Chest",
+    "Lunar Chest",
+    "Void Chest",
+    "Daily Chest",
+}
+
+local function getChestTimerText(chestName)
+    local map   = workspace:FindFirstChild("Map"); if not map then return nil end
+    local acts  = map:FindFirstChild("Activations"); if not acts then return nil end
+    local chest = acts:FindFirstChild(chestName); if not chest then return nil end
+    local gui   = chest:FindFirstChild("ChestTimer"); if not gui then return nil end
+    local title = gui:FindFirstChild("Title"); if not title then return nil end
+    return title.Text
+end
+
+local function isChestReady(chestName)
+    local txt = getChestTimerText(chestName)
+    if not txt or txt == "" then return true end
+    return not (txt:match("%d+:%d+") or txt:match("%d+ Day"))
+end
+
+local function tryCollectChest(chestName)
+    if not isChestReady(chestName) then return false end
+
+    local char = lp.Character; if not char then return false end
+    local map  = workspace:FindFirstChild("Map"); if not map then return false end
+    local acts = map:FindFirstChild("Activations"); if not acts then return false end
+    local chest = acts:FindFirstChild(chestName); if not chest then return false end
+
+    -- Teleport to chest
+    char:PivotTo(chest:GetPivot())
+    task.wait(0.5)
+
+    -- Confirmed Cobalt: "collect chest" FireServer({ chestName })
+    local collectRemote = RS.Network:FindFirstChild("collect chest")
+    if collectRemote then
+        pcall(function() collectRemote:FireServer({ chestName }) end)
+    end
+
+    -- VFX: firesignal OnClientEvent { chestName, {} }
+    local vfxRemote = RS.Network:FindFirstChild("chest collected")
+    if vfxRemote then
+        pcall(function() firesignal(vfxRemote.OnClientEvent, { chestName, {} }) end)
+    end
+
+    task.wait(0.5)
+
+    -- Verify via timer
+    local timerAfter = getChestTimerText(chestName)
+    local collected  = timerAfter and (timerAfter:match("%d+:%d+") or timerAfter:match("%d+ Day"))
+    if collected then
+        notify("Chests", "✓ " .. chestName .. " | " .. tostring(timerAfter))
+        return true
+    else
+        return false
+    end
+end
+
+local chestFailedRetry = {}
+
+WorldTab:CreateToggle({
+    Name = "Auto Collect Chests",
+    CurrentValue = false,
+    Flag = "AutoChests",
+    Callback = function(state)
+        if state then
+            chestFailedRetry = {}
+            startThread("chests", function()
+                while true do
+                    -- Try all chests
+                    for _, chestName in ipairs(ALL_CHESTS) do
+                        pcall(function()
+                            local result = tryCollectChest(chestName)
+                            if result then
+                                chestFailedRetry[chestName] = nil
+                            else
+                                local txt = getChestTimerText(chestName)
+                                local onCooldown = txt and (txt:match("%d+:%d+") or txt:match("%d+ Day"))
+                                if not onCooldown then
+                                    chestFailedRetry[chestName] = true
+                                end
+                            end
+                        end)
+                        task.wait(0.5)
+                    end
+
+                    -- Retry failed ones
+                    for chestName, _ in pairs(chestFailedRetry) do
+                        pcall(function()
+                            local result = tryCollectChest(chestName)
+                            if result then chestFailedRetry[chestName] = nil end
+                        end)
+                        task.wait(0.5)
+                    end
+
+                    -- If hatching, return to egg stand after collecting all chests
+                    if Threads["hatch"] and cachedEggPos then
+                        local char = lp.Character
+                        if char then
+                            char:PivotTo(CFrame.new(cachedEggPos + Vector3.new(0, 3, 4)))
+                            notify("Chests", "Done — returned to egg stand")
+                        end
+                    end
+
+                    task.wait(10)
+                end
+            end)
+            notify("Chests", "Started — teleports to chests, returns to egg if hatching")
+        else
+            stopThread("chests")
+            notify("Chests", "Stopped.")
+        end
+    end,
+})
+
+WorldTab:CreateLabel("Teleports to each chest — returns to egg stand if auto hatch is on")
+WorldTab:CreateDivider()
+
+-- ── FREE GIFTS ───────────────────────────────────────────
+-- Confirmed Cobalt: "redeem free gift" InvokeServer({ slotIndex })
+-- 12 gift slots total — checks every 5 minutes
+
+local redeemGiftRemote = nil
+task.spawn(function()
+    redeemGiftRemote = RS:WaitForChild("Network"):WaitForChild("redeem free gift", 30)
+end)
+
+local function redeemAllGifts()
+    if not redeemGiftRemote then return end
+    local anyRedeemed = false
+    for slot = 1, 12 do
+        local ok, result = pcall(function()
+            return redeemGiftRemote:InvokeServer({ slot })
+        end)
+        if ok and type(result) == "table" and result[1] == true then
+            anyRedeemed = true
+            print("[Free Gifts] Slot " .. slot .. " redeemed ✓")
+            task.wait(0.3)
+        end
+    end
+    if anyRedeemed then
+        notify("Free Gifts", "Gifts redeemed!")
+    end
+end
+
+-- Auto Redeem Free Gifts — always runs in background every 5 min
+task.spawn(function()
+    task.wait(5)
+    while true do
+        pcall(redeemAllGifts)
+        task.wait(300)
+    end
+end)
+
+WorldTab:CreateButton({
+    Name = "Redeem All Gifts Now",
+    Callback = function()
+        task.spawn(redeemAllGifts)
+        notify("Free Gifts", "Redeeming all gift slots...")
+    end,
+})
+
+WorldTab:CreateLabel("Free gifts auto-redeem every 5 min in background | 12 slots confirmed")
+
+WorldTab:CreateButton({
+    Name = "⛔  STOP ALL",
+    Callback = function()
+        for k in pairs(Threads) do stopThread(k) end
+        stopMagnet()
+        notify("Stopped", "All automation disabled.")
+    end,
+})
+
+-- ══════════════════════════════════════════════════════════
+-- CONFIG TAB — Named config saves with dropdown to load
+-- Each config saved as: yeshub_config_<name>.json
+-- ══════════════════════════════════════════════════════════
+
+local ConfigTab   = Window:CreateTab("Config", 4483362458)
+local HS          = game:GetService("HttpService")
+local CONFIG_DIR  = "YESHub_Configs"
+local selectedConfig = "default"
+
+-- Ensure folder exists
+pcall(function()
+    if not isfolder(CONFIG_DIR) then
+        makefolder(CONFIG_DIR)
+    end
+end)
+
+local function getConfigPath(name)
+    return CONFIG_DIR .. "/" .. name .. ".json"
+end
+
+local function listConfigs()
+    local files = {}
+    pcall(function()
+        for _, f in ipairs(listfiles(CONFIG_DIR)) do
+            -- Extract name from path, strip .json
+            local name = f:match("([^/\\]+)%.json$")
+            if name then table.insert(files, name) end
+        end
+    end)
+    if #files == 0 then table.insert(files, "default") end
+    table.sort(files)
+    return files
+end
+
+local function readFlags()
+    local config = {}
+    if not Rayfield.Flags then return config end
+    for flagName, flagObj in pairs(Rayfield.Flags) do
+        pcall(function()
+            local val = flagObj.CurrentValue
+            if val ~= nil then config[flagName] = val end
+        end)
+    end
+    return config
+end
+
+local function applyFlags(config)
+    if not Rayfield.Flags then return 0 end
+    local loaded = 0
+    for flagName, value in pairs(config) do
+        local flagObj = Rayfield.Flags[flagName]
+        if flagObj then
+            pcall(function() flagObj:Set(value) end)
+            loaded = loaded + 1
+        end
+    end
+    return loaded
+end
+
+-- Config name input via a simple text label + button approach
+-- (Rayfield doesn't have text input, so we use a dropdown of existing + "default")
+local configNames    = listConfigs()
+local configDropdown = nil
+
+local function refreshConfigDropdown()
+    configNames = listConfigs()
+    -- Rayfield dropdown can't be updated dynamically, so notify user
+    notify("Config", "Reload script to see new config in dropdown")
+end
+
+-- Save input name — user types in chat or we use selected from dropdown
+local saveConfigName = "default"
+
+ConfigTab:CreateLabel("── Save ──────────────────")
+
+ConfigTab:CreateDropdown({
+    Name = "Config Slot Name",
+    Options = {"default", "hatch", "farm", "rebirth", "all"},
+    CurrentOption = {"default"},
+    MultipleOptions = false,
+    Flag = "ConfigSlotName",
+    Callback = function(opt)
+        saveConfigName = type(opt)=="table" and opt[1] or opt
+        selectedConfig = saveConfigName
+    end,
+})
+
+ConfigTab:CreateButton({
+    Name = "💾  Save Current Settings",
+    Callback = function()
+        local config = readFlags()
+        local path   = getConfigPath(saveConfigName)
+        local ok, err = pcall(function()
+            writefile(path, HS:JSONEncode(config))
+        end)
+        if ok then
+            notify("Config", "Saved as '" .. saveConfigName .. "'!")
+            print("[Config] Saved to " .. path)
+        else
+            notify("Config", "Save failed: " .. tostring(err))
+        end
+    end,
+})
+
+ConfigTab:CreateLabel("── Load ──────────────────")
+
+ConfigTab:CreateDropdown({
+    Name = "Select Config to Load",
+    Options = configNames,
+    CurrentOption = {configNames[1]},
+    MultipleOptions = false,
+    Flag = "ConfigToLoad",
+    Callback = function(opt)
+        selectedConfig = type(opt)=="table" and opt[1] or opt
+    end,
+})
+
+ConfigTab:CreateButton({
+    Name = "📂  Load Selected Config",
+    Callback = function()
+        local path = getConfigPath(selectedConfig)
+        local ok, data = pcall(readfile, path)
+        if not ok or not data or data == "" then
+            notify("Config", "Config '" .. selectedConfig .. "' not found.")
+            return
+        end
+        local config
+        local parseOk = pcall(function() config = HS:JSONDecode(data) end)
+        if not parseOk or not config then
+            notify("Config", "Failed to parse config.")
+            return
+        end
+        local loaded = applyFlags(config)
+        notify("Config", "Loaded '" .. selectedConfig .. "' — " .. loaded .. " settings applied")
+        print("[Config] Loaded " .. loaded .. " flags from " .. path)
+    end,
+})
+
+ConfigTab:CreateLabel("── Delete ────────────────")
+
+ConfigTab:CreateButton({
+    Name = "🗑️  Delete Selected Config",
+    Callback = function()
+        local path = getConfigPath(selectedConfig)
+        local ok = pcall(delfile, path)
+        if ok then
+            notify("Config", "Deleted '" .. selectedConfig .. "'")
+        else
+            notify("Config", "Could not delete '" .. selectedConfig .. "'")
+        end
+    end,
+})
+
+ConfigTab:CreateDivider()
+ConfigTab:CreateLabel("Configs saved to: YESHub_Configs/<name>.json")
+ConfigTab:CreateLabel("Slots: default / hatch / farm / rebirth / all")
+
+-- Auto-load 'default' config on startup
+task.spawn(function()
+    task.wait(2)
+    local path = getConfigPath("default")
+    local ok, data = pcall(readfile, path)
+    if ok and data and data ~= "" then
+        local config
+        local parseOk = pcall(function() config = HS:JSONDecode(data) end)
+        if parseOk and config then
+            local loaded = applyFlags(config)
+            if loaded > 0 then
+                notify("Config", "Auto-loaded 'default' — " .. loaded .. " settings restored")
+            end
+        end
+    end
+end)
+
+-- ══════════════════════════════════════════════════════════
+-- AUTO EQUIP BEST PETS — every 5 minutes, silently
+-- Remote: "equip best pets" InvokeServer({}) — confirmed Cobalt
+-- No toggle/button — just runs in background automatically
+-- ══════════════════════════════════════════════════════════
+
+task.spawn(function()
+    local equipRemote = RS:WaitForChild("Network"):WaitForChild("equip best pets", 30)
+    if not equipRemote then
+        print("[Auto Equip] Remote not found")
+        return
+    end
+
+    task.wait(5) -- initial delay after script load
+    while true do
+        pcall(function()
+            equipRemote:InvokeServer({})
+        end)
+        print("[Auto Equip] Equipped best pets")
+        task.wait(300) -- every 5 minutes
+    end
+end)
+
+-- ══════════════════════════════════════════════════════════
+-- LOAD CONFIGURATION — must be called after ALL UI elements
+-- Restores all saved toggle/dropdown/slider values automatically
+-- ══════════════════════════════════════════════════════════
+Rayfield:LoadConfiguration()
