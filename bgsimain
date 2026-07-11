@@ -519,7 +519,7 @@ HatchTab:CreateDropdown({
     end,
 })
 
--- Auto-delete remote fires after each hatch via a listener
+-- Auto-delete remote
 local autoDeletePetRemote = nil
 task.spawn(function()
     autoDeletePetRemote = RS:WaitForChild("Network"):WaitForChild("auto delete pet", 30)
@@ -556,18 +556,17 @@ HatchTab:CreateToggle({
     Callback = function(state)
         getgenv().AutoDeleteEnabled = state
         if state then
-            -- Immediately fire for currently selected pets on enable
             for _, petId in ipairs(autoDeletePetIds) do
                 pcall(fireAutoDelete, petId)
             end
-            notify("Auto Delete", "ON — deletes selected pets on each hatch")
+            notify("Auto Delete", "ON -- deletes selected pets on each hatch")
         else
             notify("Auto Delete", "OFF.")
         end
     end,
 })
 
-HatchTab:CreateLabel("Toggle on, select pets — deletes on every hatch in real time")
+HatchTab:CreateLabel("Toggle on, select pets -- deletes on every hatch in real time")
 
 -- ══════════════════════════════════════════════════════════
 -- TAB 2 — AUTO BOOSTS (next to Auto Hatch)
@@ -1729,14 +1728,25 @@ local function redeemAllGifts()
     end
 end
 
--- Auto Redeem Free Gifts — always runs in background every 5 min
-task.spawn(function()
-    task.wait(5)
-    while true do
-        pcall(redeemAllGifts)
-        task.wait(300)
-    end
-end)
+WorldTab:CreateToggle({
+    Name = "Auto Redeem Free Gifts (every 5 min)",
+    CurrentValue = false,
+    Flag = "AutoFreeGifts",
+    Callback = function(state)
+        if state then
+            startThread("freegifts", function()
+                while true do
+                    pcall(redeemAllGifts)
+                    task.wait(300) -- 5 minutes
+                end
+            end)
+            notify("Free Gifts", "Started — redeeming all 12 slots every 5 min")
+        else
+            stopThread("freegifts")
+            notify("Free Gifts", "Stopped.")
+        end
+    end,
+})
 
 WorldTab:CreateButton({
     Name = "Redeem All Gifts Now",
@@ -1746,7 +1756,7 @@ WorldTab:CreateButton({
     end,
 })
 
-WorldTab:CreateLabel("Free gifts auto-redeem every 5 min in background | 12 slots confirmed")
+WorldTab:CreateLabel("12 gift slots — InvokeServer({ slotIndex }) confirmed from Cobalt")
 
 WorldTab:CreateButton({
     Name = "⛔  STOP ALL",
@@ -1758,39 +1768,21 @@ WorldTab:CreateButton({
 })
 
 -- ══════════════════════════════════════════════════════════
--- CONFIG TAB — Named config saves with dropdown to load
--- Each config saved as: yeshub_config_<name>.json
+-- CONFIG TAB -- GitHub sync (all accounts load same settings)
 -- ══════════════════════════════════════════════════════════
 
-local ConfigTab   = Window:CreateTab("Config", 4483362458)
-local HS          = game:GetService("HttpService")
-local CONFIG_DIR  = "YESHub_Configs"
-local selectedConfig = "default"
+local ConfigTab = Window:CreateTab("Config", 4483362458)
+local HS        = game:GetService("HttpService")
 
--- Ensure folder exists
-pcall(function()
-    if not isfolder(CONFIG_DIR) then
-        makefolder(CONFIG_DIR)
-    end
-end)
+-- PASTE YOUR NEW GITHUB TOKEN HERE (stays on your device only)
+local GITHUB_TOKEN = "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"
+-- Repo details
+local GITHUB_USER  = "bassellbasketball"
+local GITHUB_REPO  = "bgsi-scripts"
+local GITHUB_FILE  = "settings.json"
 
-local function getConfigPath(name)
-    return CONFIG_DIR .. "/" .. name .. ".json"
-end
-
-local function listConfigs()
-    local files = {}
-    pcall(function()
-        for _, f in ipairs(listfiles(CONFIG_DIR)) do
-            -- Extract name from path, strip .json
-            local name = f:match("([^/\\]+)%.json$")
-            if name then table.insert(files, name) end
-        end
-    end)
-    if #files == 0 then table.insert(files, "default") end
-    table.sort(files)
-    return files
-end
+local RAW_URL = "https://raw.githubusercontent.com/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/main/" .. GITHUB_FILE
+local API_URL = "https://api.github.com/repos/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/contents/" .. GITHUB_FILE
 
 local function readFlags()
     local config = {}
@@ -1817,122 +1809,143 @@ local function applyFlags(config)
     return loaded
 end
 
--- Config name input via a simple text label + button approach
--- (Rayfield doesn't have text input, so we use a dropdown of existing + "default")
-local configNames    = listConfigs()
-local configDropdown = nil
-
-local function refreshConfigDropdown()
-    configNames = listConfigs()
-    -- Rayfield dropdown can't be updated dynamically, so notify user
-    notify("Config", "Reload script to see new config in dropdown")
+local function toBase64(data)
+    local b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
+    local result = {}
+    local padding = (3 - #data % 3) % 3
+    data = data .. string.rep("\0", padding)
+    for i = 1, #data, 3 do
+        local a, b, c = data:byte(i, i+2)
+        local n = a * 65536 + b * 256 + c
+        table.insert(result, b64chars:sub(math.floor(n/262144)%64+1, math.floor(n/262144)%64+1))
+        table.insert(result, b64chars:sub(math.floor(n/4096)%64+1,   math.floor(n/4096)%64+1))
+        table.insert(result, b64chars:sub(math.floor(n/64)%64+1,     math.floor(n/64)%64+1))
+        table.insert(result, b64chars:sub(n%64+1,                    n%64+1))
+    end
+    local out = table.concat(result)
+    return out:sub(1, #out - padding) .. string.rep("=", padding)
 end
 
--- Save input name — user types in chat or we use selected from dropdown
-local saveConfigName = "default"
+-- Fetch settings from GitHub and apply to all flags
+local function loadFromGitHub()
+    local ok, data = pcall(function()
+        return game:HttpGet(RAW_URL .. "?t=" .. tostring(os.time()))
+    end)
+    if not ok or not data or data == "" or data:find("404") then
+        return false, "No settings on GitHub yet -- push your settings first."
+    end
+    local config
+    local parseOk = pcall(function() config = HS:JSONDecode(data) end)
+    if not parseOk or not config then
+        return false, "Failed to parse settings from GitHub."
+    end
+    local loaded = applyFlags(config)
+    return true, loaded
+end
 
-ConfigTab:CreateLabel("── Save ──────────────────")
+-- Push current settings up to GitHub
+local function pushToGitHub()
+    if GITHUB_TOKEN == "YOUR_GITHUB_TOKEN_HERE" or GITHUB_TOKEN == "" then
+        return false, "No token set -- paste your GitHub token into the script first."
+    end
 
-ConfigTab:CreateDropdown({
-    Name = "Config Slot Name",
-    Options = {"default", "hatch", "farm", "rebirth", "all"},
-    CurrentOption = {"default"},
-    MultipleOptions = false,
-    Flag = "ConfigSlotName",
-    Callback = function(opt)
-        saveConfigName = type(opt)=="table" and opt[1] or opt
-        selectedConfig = saveConfigName
-    end,
-})
+    local config  = readFlags()
+    local encoded = HS:JSONEncode(config)
+
+    -- Get current file SHA (required by GitHub API to update an existing file)
+    local sha = nil
+    pcall(function()
+        local info = HS:RequestAsync({
+            Url     = API_URL,
+            Method  = "GET",
+            Headers = {
+                ["Authorization"] = "token " .. GITHUB_TOKEN,
+                ["User-Agent"]    = "YESHub",
+            }
+        })
+        if info and info.StatusCode == 200 then
+            local parsed = HS:JSONDecode(info.Body)
+            sha = parsed and parsed.sha
+        end
+    end)
+
+    local bodyTable = {
+        message = "Update settings from YESHub",
+        content = toBase64(encoded),
+    }
+    if sha then bodyTable.sha = sha end
+
+    local ok2, res = pcall(function()
+        return HS:RequestAsync({
+            Url     = API_URL,
+            Method  = "PUT",
+            Headers = {
+                ["Authorization"] = "token " .. GITHUB_TOKEN,
+                ["Content-Type"]  = "application/json",
+                ["User-Agent"]    = "YESHub",
+            },
+            Body = HS:JSONEncode(bodyTable),
+        })
+    end)
+
+    if not ok2 or not res then
+        return false, "Request failed -- check executor allows HttpRequest."
+    end
+    if res.StatusCode == 200 or res.StatusCode == 201 then
+        return true, "Pushed! All accounts sync these settings on next inject."
+    else
+        return false, "GitHub error " .. tostring(res.StatusCode)
+    end
+end
+
+ConfigTab:CreateLabel("-- GitHub Sync --")
+ConfigTab:CreateLabel("All accounts load the same settings from GitHub on inject")
 
 ConfigTab:CreateButton({
-    Name = "💾  Save Current Settings",
+    Name = "Push My Settings to GitHub",
     Callback = function()
-        local config = readFlags()
-        local path   = getConfigPath(saveConfigName)
-        local ok, err = pcall(function()
-            writefile(path, HS:JSONEncode(config))
+        notify("Config", "Pushing settings to GitHub...")
+        task.spawn(function()
+            local ok, msg = pushToGitHub()
+            notify("Config", tostring(msg))
+            print("[Config] Push: " .. tostring(msg))
         end)
-        if ok then
-            notify("Config", "Saved as '" .. saveConfigName .. "'!")
-            print("[Config] Saved to " .. path)
-        else
-            notify("Config", "Save failed: " .. tostring(err))
-        end
-    end,
-})
-
-ConfigTab:CreateLabel("── Load ──────────────────")
-
-ConfigTab:CreateDropdown({
-    Name = "Select Config to Load",
-    Options = configNames,
-    CurrentOption = {configNames[1]},
-    MultipleOptions = false,
-    Flag = "ConfigToLoad",
-    Callback = function(opt)
-        selectedConfig = type(opt)=="table" and opt[1] or opt
     end,
 })
 
 ConfigTab:CreateButton({
-    Name = "📂  Load Selected Config",
+    Name = "Pull Settings from GitHub Now",
     Callback = function()
-        local path = getConfigPath(selectedConfig)
-        local ok, data = pcall(readfile, path)
-        if not ok or not data or data == "" then
-            notify("Config", "Config '" .. selectedConfig .. "' not found.")
-            return
-        end
-        local config
-        local parseOk = pcall(function() config = HS:JSONDecode(data) end)
-        if not parseOk or not config then
-            notify("Config", "Failed to parse config.")
-            return
-        end
-        local loaded = applyFlags(config)
-        notify("Config", "Loaded '" .. selectedConfig .. "' — " .. loaded .. " settings applied")
-        print("[Config] Loaded " .. loaded .. " flags from " .. path)
-    end,
-})
-
-ConfigTab:CreateLabel("── Delete ────────────────")
-
-ConfigTab:CreateButton({
-    Name = "🗑️  Delete Selected Config",
-    Callback = function()
-        local path = getConfigPath(selectedConfig)
-        local ok = pcall(delfile, path)
-        if ok then
-            notify("Config", "Deleted '" .. selectedConfig .. "'")
-        else
-            notify("Config", "Could not delete '" .. selectedConfig .. "'")
-        end
+        notify("Config", "Fetching from GitHub...")
+        task.spawn(function()
+            local ok, result = loadFromGitHub()
+            if ok then
+                notify("Config", "Synced " .. tostring(result) .. " settings from GitHub!")
+            else
+                notify("Config", tostring(result))
+            end
+        end)
     end,
 })
 
 ConfigTab:CreateDivider()
-ConfigTab:CreateLabel("Configs saved to: YESHub_Configs/<name>.json")
-ConfigTab:CreateLabel("Slots: default / hatch / farm / rebirth / all")
+ConfigTab:CreateLabel("Token lives in the script only -- never shared")
+ConfigTab:CreateLabel("Push once from one account -- all others sync on inject")
 
--- Auto-load 'default' config on startup
+-- Auto-load from GitHub on every inject
 task.spawn(function()
     task.wait(2)
-    local path = getConfigPath("default")
-    local ok, data = pcall(readfile, path)
-    if ok and data and data ~= "" then
-        local config
-        local parseOk = pcall(function() config = HS:JSONDecode(data) end)
-        if parseOk and config then
-            local loaded = applyFlags(config)
-            if loaded > 0 then
-                notify("Config", "Auto-loaded 'default' — " .. loaded .. " settings restored")
-            end
+    local ok, result = loadFromGitHub()
+    if ok then
+        print("[Config] Auto-synced " .. tostring(result) .. " settings from GitHub")
+        if result > 0 then
+            notify("Config", "Settings synced from GitHub!")
         end
+    else
+        print("[Config] GitHub sync: " .. tostring(result))
     end
 end)
 
--- ══════════════════════════════════════════════════════════
 -- AUTO EQUIP BEST PETS — every 5 minutes, silently
 -- Remote: "equip best pets" InvokeServer({}) — confirmed Cobalt
 -- No toggle/button — just runs in background automatically
@@ -1956,7 +1969,6 @@ task.spawn(function()
 end)
 
 -- ══════════════════════════════════════════════════════════
--- LOAD CONFIGURATION — must be called after ALL UI elements
--- Restores all saved toggle/dropdown/slider values automatically
+-- LOAD CONFIGURATION -- must be after ALL UI elements
 -- ══════════════════════════════════════════════════════════
 Rayfield:LoadConfiguration()
