@@ -11,7 +11,7 @@ local Window = Rayfield:CreateWindow({
     Theme = "Default",
     DisableRayfieldPrompts = false,
     DisableBuildWarnings = false,
-    ConfigurationSaving = { Enabled = true, FolderName = "YESHub", FileName = "Config" },
+    ConfigurationSaving = { Enabled = true, FolderName = "YESHub" },
     KeySystem = false,
 })
 
@@ -447,28 +447,15 @@ HatchTab:CreateLabel("Flags auto-respawn per slot interval. Clears animation loc
 --   77=Withered Cat, 78=Withered Bear, 79=Crow, 80=Withering Wisp,
 --   81=Withering Feline, 82=Abstrax, 83=Wilting Rose, 84=Veiled Horologe
 
-local ALL_DELETE_PETS = {
-    -- Release Egg (IDs 66-76)
-    { id = "66", name = "Release Pet (50%)"    },
-    { id = "67", name = "Release Pet (35%)"    },
-    { id = "68", name = "Release Pet (16%)"    },
-    { id = "69", name = "Release Pet (0.1%)"   },
-    { id = "70", name = "Release Pet (0.01%)"  },
-    { id = "71", name = "Release Pet (0.1%) B" },
-    { id = "72", name = "Release Secret 1"     },
-    { id = "73", name = "Release Secret 2"     },
-    { id = "74", name = "Release Secret 3"     },
-    { id = "75", name = "Release Secret 4"     },
-    { id = "76", name = "Release Secret 5"     },
-    -- Abstrax Egg (IDs 77-84)
-    { id = "77", name = "Withered Cat"         },
-    { id = "78", name = "Withered Bear"        },
-    { id = "79", name = "Crow"                 },
-    { id = "80", name = "Withering Wisp"       },
-    { id = "81", name = "Withering Feline"     },
-    { id = "82", name = "Abstrax"              },
-    { id = "83", name = "Wilting Rose"         },
-    { id = "84", name = "Veiled Horologe"      },
+local ABSTRAX_EGG_PETS = {
+    { id = "77", name = "Withered Cat"     },
+    { id = "78", name = "Withered Bear"    },
+    { id = "79", name = "Crow"             },
+    { id = "80", name = "Withering Wisp"   },
+    { id = "81", name = "Withering Feline" },
+    { id = "82", name = "Abstrax"          },
+    { id = "83", name = "Wilting Rose"     },
+    { id = "84", name = "Veiled Horologe"  },
 }
 
 local autoDeletePetIds  = {} -- selected pet IDs to delete
@@ -476,7 +463,7 @@ local autoDeleteVariants = { normal = false, shiny = false }
 
 -- Build dropdown options: each pet as "Name (ID)"
 local PET_DELETE_OPTIONS = {}
-for _, pet in ipairs(ALL_DELETE_PETS) do
+for _, pet in ipairs(ABSTRAX_EGG_PETS) do
     table.insert(PET_DELETE_OPTIONS, pet.name .. " (" .. pet.id .. ")")
 end
 
@@ -492,12 +479,6 @@ HatchTab:CreateDropdown({
         for _, opt in ipairs(selected) do
             local id = opt:match("%((%d+)%)")
             if id then table.insert(autoDeletePetIds, id) end
-        end
-        -- Real-time: if toggle is on, immediately fire delete for newly selected pets
-        if getgenv().AutoDeleteEnabled then
-            for _, petId in ipairs(autoDeletePetIds) do
-                pcall(fireAutoDelete, petId)
-            end
         end
     end,
 })
@@ -519,7 +500,7 @@ HatchTab:CreateDropdown({
     end,
 })
 
--- Auto-delete remote
+-- Auto-delete remote fires after each hatch via a listener
 local autoDeletePetRemote = nil
 task.spawn(function()
     autoDeletePetRemote = RS:WaitForChild("Network"):WaitForChild("auto delete pet", 30)
@@ -535,38 +516,35 @@ local function fireAutoDelete(petId)
     end
 end
 
--- Listen for hatches and auto-delete if toggle is on
+-- Listen for new pets hatched and auto-delete if in selected list
 task.spawn(function()
     local Network = RS:WaitForChild("Network", 15); if not Network then return end
     local hatchedRemote = Network:WaitForChild("open egg", 15); if not hatchedRemote then return end
-    hatchedRemote.OnClientEvent:Connect(function()
-        if not getgenv().AutoDeleteEnabled then return end
+    -- When eggs are opened, check inventory for pets to delete
+    hatchedRemote.OnClientEvent:Connect(function(payload)
         if #autoDeletePetIds == 0 then return end
-        task.wait(0.5)
+        task.wait(0.5) -- wait for pet to register
         for _, petId in ipairs(autoDeletePetIds) do
             pcall(fireAutoDelete, petId)
         end
     end)
 end)
 
-HatchTab:CreateToggle({
-    Name = "Auto Delete Selected Pets",
-    CurrentValue = false,
-    Flag = "AutoDelete",
-    Callback = function(state)
-        getgenv().AutoDeleteEnabled = state
-        if state then
-            for _, petId in ipairs(autoDeletePetIds) do
-                pcall(fireAutoDelete, petId)
-            end
-            notify("Auto Delete", "ON -- deletes selected pets on each hatch")
-        else
-            notify("Auto Delete", "OFF.")
+HatchTab:CreateButton({
+    Name = "Delete Selected Pets Now",
+    Callback = function()
+        if #autoDeletePetIds == 0 then
+            notify("Auto Delete", "No pets selected.")
+            return
         end
+        for _, petId in ipairs(autoDeletePetIds) do
+            pcall(fireAutoDelete, petId)
+        end
+        notify("Auto Delete", "Fired delete for " .. #autoDeletePetIds .. " pet(s)")
     end,
 })
 
-HatchTab:CreateLabel("Toggle on, select pets -- deletes on every hatch in real time")
+HatchTab:CreateLabel("Auto-deletes selected pets on each hatch — normal/shiny/both")
 
 -- ══════════════════════════════════════════════════════════
 -- TAB 2 — AUTO BOOSTS (next to Auto Hatch)
@@ -774,16 +752,38 @@ SpinTab:CreateLabel("Invokes 'Spin Prize Wheel', immediately fires 'Prize Wheel 
 local MerchTab         = Window:CreateTab("Merchant", 4483362458)
 local merchOn          = false
 local isBuying         = false
+local currentStock     = {} -- full stock table with currency info
 local currentSlotCount = 0
+local merchCurrencyFilter = "Both" -- "Gems", "Coins", or "Both"
 
--- Confirmed from Cobalt: "buy merchant item" RemoteFunction InvokeServer({ slotIndex })
--- Result: { true } = success, anything else = stop
 local buyMerchantRemote = nil
 task.spawn(function()
     buyMerchantRemote = RS:WaitForChild("Network"):WaitForChild("buy merchant item", 30)
 end)
 
+MerchTab:CreateDropdown({
+    Name = "Buy With",
+    Options = { "Both", "Gems Only", "Coins Only" },
+    CurrentOption = {"Both"},
+    MultipleOptions = false,
+    Flag = "MerchCurrency",
+    Callback = function(opt)
+        merchCurrencyFilter = type(opt)=="table" and opt[1] or opt
+    end,
+})
+
+local function slotMatchesFilter(slotIndex)
+    if merchCurrencyFilter == "Both" then return true end
+    local item = currentStock[slotIndex]
+    if not item then return true end -- unknown — buy anyway
+    local currency = (item.currency or ""):lower()
+    if merchCurrencyFilter == "Gems Only"  then return currency == "gems" end
+    if merchCurrencyFilter == "Coins Only" then return currency == "coins" end
+    return true
+end
+
 local function buySlotUntilEmpty(slot)
+    if not slotMatchesFilter(slot) then return 0 end
     local bought = 0
     while true do
         local ok, result = pcall(function()
@@ -822,7 +822,7 @@ local function buyAll()
     isBuying = false
 end
 
--- Listen for new merchant spawns to get slot count
+-- Listen for new merchant spawns
 task.spawn(function()
     local Network = RS:WaitForChild("Network", 15); if not Network then return end
     local sr = Network:WaitForChild("update merchant stock", 15); if not sr then return end
@@ -835,6 +835,7 @@ task.spawn(function()
                  or first or payload
         end
         stock            = stock or {}
+        currentStock     = stock
         currentSlotCount = #stock
         if merchOn then task.spawn(buyAll) end
     end)
@@ -870,15 +871,16 @@ MerchTab:CreateButton({
     end,
 })
 
-MerchTab:CreateLabel("Buys max of every slot — InvokeServer({ slotIndex }) confirmed")
+MerchTab:CreateLabel("Buys max of every slot — filter by Gems/Coins/Both")
 
 -- ══════════════════════════════════════════════════════════
--- TAB 4 — AUTO FARM (Breakables + Pickup Magnet)
+-- ══════════════════════════════════════════════════════════
+-- TAB 4 — AUTO FARM
+-- Gems first across all zones, then Coins, repeat forever
+-- Stops only when BOTH gems AND coins are empty in ALL zones
 -- ══════════════════════════════════════════════════════════
 
 local FarmTab = Window:CreateTab("Auto Farm", 4483362458)
-
--- ── BREAKABLES (GEM PICKUPS ONLY) ───────────────────────
 
 local Network       = RS:WaitForChild("Network")
 local ClickPickup   = Network:WaitForChild("click pickup")
@@ -889,13 +891,11 @@ task.spawn(function()
     DamagePickup = Network:WaitForChild("damage pickup", 30)
 end)
 
--- Zones in exact order — always starts at Spawn
--- Exact coordinates provided by user
 local FARM_ZONES = {
-    { name = "Spawn",          pos = Vector3.new(-2038.67, 59.85,    -540.05) },
-    { name = "Sky Island",     pos = Vector3.new(-2163.34, 1606.11,  -469.19) },
-    { name = "Deserted Oasis", pos = Vector3.new(-2126.50, 6490.27,  -505.22) },
-    { name = "Frosty Peaks",   pos = Vector3.new(-2126.50, 6490.27,  -505.22) },
+    { name = "Spawn",             pos = Vector3.new(-2038.67, 59.85,    -540.05) },
+    { name = "Sky Island",        pos = Vector3.new(-2163.34, 1606.11,  -469.19) },
+    { name = "Deserted Oasis",    pos = Vector3.new(-2126.50, 6490.27,  -505.22) },
+    { name = "Frosty Peaks",      pos = Vector3.new(-2126.50, 6490.27,  -505.22) },
     { name = "Lunar Isle",        pos = Vector3.new(-2250.50, 19577.16, -520.05) },
     { name = "Abyssal Void",      pos = Vector3.new(-2248.41, 28796.54, -502.92) },
     { name = "Withered Courtyard",pos = Vector3.new(-2185.92, 38237.89, -491.79) },
@@ -903,23 +903,28 @@ local FARM_ZONES = {
 
 local function isGemPickup(pickup)
     for _, child in ipairs(pickup:GetChildren()) do
-        if child.Name:lower():find("gem") then
-            return true
-        end
+        if child.Name:lower():find("gem") then return true end
     end
     return false
 end
 
-local function getGemPickups()
+local function isCoinPickup(pickup)
+    for _, child in ipairs(pickup:GetChildren()) do
+        if child.Name:lower():find("coin") then return true end
+    end
+    return false
+end
+
+local function getPickupsOfType(typeCheck)
     local pickupsFolder = workspace:FindFirstChild("Visual")
         and workspace.Visual:FindFirstChild("Instances")
         and workspace.Visual.Instances:FindFirstChild("Pickups")
     if not pickupsFolder then return {} end
-
     local result = {}
     for _, pickup in ipairs(pickupsFolder:GetChildren()) do
         if not pickup.Parent then continue end
-        if not isGemPickup(pickup) then continue end
+        if skippedPickups[pickup.Name] then continue end -- never retry blacklisted
+        if not typeCheck(pickup) then continue end
         local pos = pickup:FindFirstChild("POS")
         if not pos then continue end
         if not pickup:GetAttribute("HasLanded") then continue end
@@ -928,20 +933,18 @@ local function getGemPickups()
     return result
 end
 
-local function handleBreakablePickup(pickup, pos)
+local skippedPickups = {} -- IDs of pickups that timed out — never retry these
+
+local function handlePickup(pickup, pos)
     local root = getRoot(); if not root then return end
     local id = pickup.Name
-
     root.CFrame = pos.CFrame + Vector3.new(0, 3, 0)
     task.wait(0.15)
-
     pcall(function() CollectPickup:FireServer(id, pos.Position) end)
     pcall(function() ClickPickup:FireServer({ id }) end)
     pcall(function() MagnetPickup:FireServer(id) end)
-
-    -- Keep hammering until crate is confirmed gone (pickup.Parent == nil)
-    -- Timeout increased to 30s in case a crate has high health
-    local timeout = os.clock() + 30
+    -- 3 second timeout — skip if not collected in time
+    local timeout = os.clock() + 3
     while pickup.Parent ~= nil and os.clock() < timeout do
         if DamagePickup then
             pcall(function() DamagePickup:FireServer(id, 34, false, 1) end)
@@ -950,133 +953,76 @@ local function handleBreakablePickup(pickup, pos)
         pcall(function() CollectPickup:FireServer(id, pos.Position) end)
         task.wait(0.08)
     end
-
-    -- No artificial delay — only move on once crate is confirmed broken
+    -- If still not gone after 3s, blacklist it permanently this session
+    if pickup.Parent ~= nil then
+        skippedPickups[id] = true
+        print("[Farm] Skipped pickup " .. id .. " — blacklisted")
+    end
 end
 
--- Reference to the auto break toggle so we can turn it off
-local autoBreakToggleRef = nil
-
-local function doBreakableLoop()
-    for zoneIndex, zone in ipairs(FARM_ZONES) do
-        -- Step 1: Teleport to zone FIRST
+-- Sweep all zones for a given pickup type
+-- Returns true if at least one pickup was found and handled
+local function sweepAllZones(typeCheck, typeName)
+    local anyFound = false
+    for _, zone in ipairs(FARM_ZONES) do
         tp(zone.pos + Vector3.new(0, 3, 0))
-        notify("Auto Break", "Arrived at " .. zone.name .. " — waiting 5s for gems to spawn...")
-        print("[Farm] Teleported to " .. zone.name .. " — waiting 5s")
-
-        -- Step 2: Wait 5 seconds for breakables/pickups to spawn in
-        task.wait(5)
-
-        -- Step 3: Keep processing gems in this zone until none left
+        notify("Auto Farm", zone.name .. " — " .. typeName)
+        task.wait(5) -- wait for zone to load
+        -- Drain all of this type in zone
         while true do
-            local gems = getGemPickups()
-            if #gems == 0 then
-                print("[Farm] No gems left in " .. zone.name .. " — moving to next zone")
-                notify("Auto Break", zone.name .. " cleared — moving on")
-                break
-            end
-
-            for _, entry in ipairs(gems) do
+            local pickups = getPickupsOfType(typeCheck)
+            if #pickups == 0 then break end
+            anyFound = true
+            for _, entry in ipairs(pickups) do
                 if entry.pickup and entry.pickup.Parent then
-                    handleBreakablePickup(entry.pickup, entry.pos)
+                    handlePickup(entry.pickup, entry.pos)
                 end
             end
         end
     end
+    return anyFound
+end
 
-    -- All zones exhausted — turn off the toggle
-    notify("Auto Break", "All zones cleared — stopping.")
-    print("[Farm] All zones empty — disabling auto break")
-    if autoBreakToggleRef then
-        pcall(function() autoBreakToggleRef:Set(false) end)
+local autoBreakToggleRef = nil
+
+local function doFarmLoop()
+    while true do
+        -- Pass 1: all gems across all zones
+        local foundGems  = sweepAllZones(isGemPickup,  "Gems")
+        -- Pass 2: all coins across all zones (while coins are collected, gems respawn)
+        local foundCoins = sweepAllZones(isCoinPickup, "Coins")
+        -- If both passes found nothing — truly empty everywhere, stop
+        if not foundGems and not foundCoins then
+            notify("Auto Farm", "All zones empty — stopping.")
+            print("[Farm] Nothing found in any zone — stopping")
+            stopThread("breakables")
+            pcall(function()
+                if autoBreakToggleRef then autoBreakToggleRef:Set(false) end
+            end)
+            return
+        end
+        -- Otherwise loop — gems may have respawned during coin pass
     end
-    stopThread("breakables")
 end
 
 autoBreakToggleRef = FarmTab:CreateToggle({
-    Name = "Auto Break Gem Crates",
+    Name = "Auto Farm (Gems → Coins → loop)",
     CurrentValue = false,
     Flag = "AutoBreak",
     Callback = function(state)
         if state then
-            startThread("breakables", function()
-                pcall(doBreakableLoop)
-            end)
-            notify("Auto Break", "Starting at Spawn — cycles all zones, stops when empty")
+            skippedPickups = {} -- fresh blacklist each session
+            startThread("breakables", function() pcall(doFarmLoop) end)
+            notify("Auto Farm", "Started — Gems first, then Coins, repeats")
         else
             stopThread("breakables")
-            notify("Auto Break", "Stopped.")
+            notify("Auto Farm", "Stopped.")
         end
     end,
 })
 
-FarmTab:CreateLabel("Spawn → Sky → Oasis → Frosty → Lunar → Void | 2s between breaks | Auto-off when done")
-FarmTab:CreateDivider()
-FarmTab:CreateLabel("Uses click/collect/magnet/damage remotes — gems only")
+FarmTab:CreateLabel("Gems → Coins → Gems → ... stops only when both empty across all zones")
 
-FarmTab:CreateDivider()
-
--- ── PICKUP MAGNET ────────────────────────────────────────
-
-local CURRENCY_PICKUP_NAMES = {
-    ["small coin"]         = true, ["medium coins"]       = true,
-    ["large coins"]        = true, ["small gem"]          = true,
-    ["large gems"]         = true, ["space small coin"]   = true,
-    ["space medium coins"] = true, ["space large coins"]  = true,
-    ["space small gem"]    = true, ["space large gems"]   = true,
-    ["void small coin"]    = true, ["void medium coins"]  = true,
-    ["void large coins"]   = true, ["void small gem"]     = true,
-    ["void large gems"]    = true, ["heart"]              = true,
-    ["bag of hearts"]      = true, ["pile of hearts"]     = true,
-}
-
-local magnetConn    = nil
-local magnetEnabled = false
-local MAGNET_SPEED  = 120
-
-local function startMagnet()
-    if magnetConn then magnetConn:Disconnect(); magnetConn = nil end
-    magnetConn = RunSvc.Heartbeat:Connect(function(dt)
-        if not magnetEnabled then return end
-        local root = getRoot(); if not root then return end
-        local rootPos = root.Position
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("Model") and CURRENCY_PICKUP_NAMES[obj.Name:lower()] then
-                local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart")
-                if part then
-                    local dist = (part.Position - rootPos).Magnitude
-                    if dist > 1 then
-                        local dir    = (rootPos - part.Position).Unit
-                        local move   = math.min(MAGNET_SPEED * dt, dist)
-                        local newPos = part.Position + dir * move
-                        pcall(function()
-                            if obj.PrimaryPart then obj:PivotTo(CFrame.new(newPos))
-                            else part.CFrame = CFrame.new(newPos) end
-                        end)
-                    end
-                end
-            end
-        end
-    end)
-end
-
-local function stopMagnet()
-    magnetEnabled = false
-    if magnetConn then magnetConn:Disconnect(); magnetConn = nil end
-end
-
-FarmTab:CreateToggle({
-    Name = "Coin/Gem Pickup Magnet",
-    CurrentValue = false,
-    Flag = "AutoPickup",
-    Callback = function(state)
-        magnetEnabled = state
-        if state then startMagnet(); notify("Pickup Magnet", "ON — pickups sliding to you")
-        else stopMagnet(); notify("Pickup Magnet", "OFF.") end
-    end,
-})
-
-FarmTab:CreateLabel("Pulls all coin/gem/heart pickup Models toward you — you stay still")
 
 -- ══════════════════════════════════════════════════════════
 -- TAB 5 — AUTO REBIRTH
@@ -1119,8 +1065,55 @@ RebirthTab:CreateDropdown({
     end,
 })
 
+-- ── COIN HELPERS ─────────────────────────────────────────
+
+local BILLION = 1_000_000_000
+
+local function getCoins()
+    local save = getSave(); if not save then return 0 end
+    return tonumber(save.Coins or 0) or 0
+end
+
+local sellBubblesRemote = nil
+task.spawn(function()
+    sellBubblesRemote = RS:WaitForChild("Network"):WaitForChild("sell bubbles", 30)
+end)
+
+-- Sell bubbles loop: fires "sell bubbles" FireServer({ "Sell Space" }) rapidly
+-- No teleport needed — remote works from anywhere
+-- Runs until coins >= target, then stops
+local function doSellBubbles()
+    if not sellBubblesRemote then return end
+    while getCoins() < 10 * BILLION do
+        pcall(function() sellBubblesRemote:FireServer({ "Sell Space" }) end)
+        task.wait(0.1)
+    end
+    notify("Sell Bubbles", "Reached 10B coins — stopping sell")
+end
+
+-- Check every 0.5s — if coins drop below 2B, start selling in background
+-- while hatching continues uninterrupted
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if getCoins() < 2 * BILLION then
+            if not Threads["sellbubbles"] then
+                notify("Sell Bubbles", "Under 2B coins — selling bubbles until 10B")
+                startThread("sellbubbles", doSellBubbles)
+            end
+        else
+            if Threads["sellbubbles"] then
+                stopThread("sellbubbles")
+            end
+        end
+    end
+end)
+
 local function doRebirth()
     local save = getSave(); if not save then return end
+
+    -- Gate: must have 20B+ coins before rebirthing
+    if getCoins() < 20 * BILLION then return end
 
     local cur     = tonumber(save.Rebirths or 0) or 0
     local bubbles = tonumber(save.Bubbles  or 0) or 0
@@ -1144,7 +1137,7 @@ RebirthTab:CreateToggle({
             startThread("rebirth", function()
                 while true do pcall(doRebirth); task.wait(0.5) end
             end)
-            notify("Auto Rebirth", "Started.")
+            notify("Auto Rebirth", "Started — requires 20B+ coins")
         else
             stopThread("rebirth")
             notify("Auto Rebirth", "Stopped.")
@@ -1152,7 +1145,7 @@ RebirthTab:CreateToggle({
     end,
 })
 
-RebirthTab:CreateLabel("Remote: 'buy rebirth' InvokeServer({ amount })")
+RebirthTab:CreateLabel("Requires 20B coins | Auto-sells bubbles below 2B until 10B")
 
 -- ══════════════════════════════════════════════════════════
 -- SKILL TREE (inside Rebirth tab)
@@ -1581,6 +1574,16 @@ WorldTab:CreateDivider()
 -- Teleports to each chest, collects, then returns to egg stand if hatching
 -- Timer read from workspace.Map.Activations[name].ChestTimer.Title.Text
 
+-- Exact chest teleport positions provided by user
+-- Using these instead of GetPivot() to avoid teleporting inside the chest
+local CHEST_POSITIONS = {
+    ["Sky Chest"]    = Vector3.new(-2182.23, 1608.85,  -498.97),
+    ["Frosty Chest"] = Vector3.new(-2200.81, 11695.73, -557.64),
+    ["Lunar Chest"]  = Vector3.new(-2133.80, 19588.48, -483.59),
+    ["Void Chest"]   = Vector3.new(-2184.67, 28797.41, -565.96),
+    ["Daily Chest"]  = Vector3.new(-2085.84, 139.79,   -127.42),
+}
+
 local ALL_CHESTS = {
     "Sky Chest",
     "Frosty Chest",
@@ -1608,13 +1611,20 @@ local function tryCollectChest(chestName)
     if not isChestReady(chestName) then return false end
 
     local char = lp.Character; if not char then return false end
-    local map  = workspace:FindFirstChild("Map"); if not map then return false end
-    local acts = map:FindFirstChild("Activations"); if not acts then return false end
-    local chest = acts:FindFirstChild(chestName); if not chest then return false end
 
-    -- Teleport to chest
-    char:PivotTo(chest:GetPivot())
-    task.wait(0.5)
+    -- Teleport to exact coords to avoid bugging inside chest
+    local pos = CHEST_POSITIONS[chestName]
+    if pos then
+        char:PivotTo(CFrame.new(pos))
+    else
+        -- Fallback: use workspace activation position
+        local map  = workspace:FindFirstChild("Map"); if not map then return false end
+        local acts = map:FindFirstChild("Activations"); if not acts then return false end
+        local chest = acts:FindFirstChild(chestName); if not chest then return false end
+        char:PivotTo(chest:GetPivot() * CFrame.new(0, 3, 5))
+    end
+
+    task.wait(1) -- settle before firing
 
     -- Confirmed Cobalt: "collect chest" FireServer({ chestName })
     local collectRemote = RS.Network:FindFirstChild("collect chest")
@@ -1622,7 +1632,7 @@ local function tryCollectChest(chestName)
         pcall(function() collectRemote:FireServer({ chestName }) end)
     end
 
-    -- VFX: firesignal OnClientEvent { chestName, {} }
+    -- VFX
     local vfxRemote = RS.Network:FindFirstChild("chest collected")
     if vfxRemote then
         pcall(function() firesignal(vfxRemote.OnClientEvent, { chestName, {} }) end)
@@ -1652,7 +1662,6 @@ WorldTab:CreateToggle({
             chestFailedRetry = {}
             startThread("chests", function()
                 while true do
-                    -- Try all chests
                     for _, chestName in ipairs(ALL_CHESTS) do
                         pcall(function()
                             local result = tryCollectChest(chestName)
@@ -1666,7 +1675,7 @@ WorldTab:CreateToggle({
                                 end
                             end
                         end)
-                        task.wait(0.5)
+                        task.wait(5) -- 5s cooldown between each chest teleport
                     end
 
                     -- Retry failed ones
@@ -1675,10 +1684,10 @@ WorldTab:CreateToggle({
                             local result = tryCollectChest(chestName)
                             if result then chestFailedRetry[chestName] = nil end
                         end)
-                        task.wait(0.5)
+                        task.wait(5)
                     end
 
-                    -- If hatching, return to egg stand after collecting all chests
+                    -- Return to egg stand if hatching
                     if Threads["hatch"] and cachedEggPos then
                         local char = lp.Character
                         if char then
@@ -1690,10 +1699,13 @@ WorldTab:CreateToggle({
                     task.wait(10)
                 end
             end)
-            notify("Chests", "Started — teleports to chests, returns to egg if hatching")
+            notify("Chests", "Started — 5s between each chest")
         else
             stopThread("chests")
             notify("Chests", "Stopped.")
+        end
+    end,
+})
         end
     end,
 })
@@ -1762,27 +1774,44 @@ WorldTab:CreateButton({
     Name = "⛔  STOP ALL",
     Callback = function()
         for k in pairs(Threads) do stopThread(k) end
-        stopMagnet()
         notify("Stopped", "All automation disabled.")
     end,
 })
 
 -- ══════════════════════════════════════════════════════════
--- CONFIG TAB -- GitHub sync (all accounts load same settings)
+-- CONFIG TAB — Named config saves with dropdown to load
+-- Each config saved as: yeshub_config_<name>.json
 -- ══════════════════════════════════════════════════════════
 
-local ConfigTab = Window:CreateTab("Config", 4483362458)
-local HS        = game:GetService("HttpService")
+local ConfigTab   = Window:CreateTab("Config", 4483362458)
+local HS          = game:GetService("HttpService")
+local CONFIG_DIR  = "YESHub_Configs"
+local selectedConfig = "default"
 
--- PASTE YOUR NEW GITHUB TOKEN HERE (stays on your device only)
-local GITHUB_TOKEN = "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"
--- Repo details
-local GITHUB_USER  = "bassellbasketball"
-local GITHUB_REPO  = "bgsi-scripts"
-local GITHUB_FILE  = "settings.json"
+-- Ensure folder exists
+pcall(function()
+    if not isfolder(CONFIG_DIR) then
+        makefolder(CONFIG_DIR)
+    end
+end)
 
-local RAW_URL = "https://raw.githubusercontent.com/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/main/" .. GITHUB_FILE
-local API_URL = "https://api.github.com/repos/" .. GITHUB_USER .. "/" .. GITHUB_REPO .. "/contents/" .. GITHUB_FILE
+local function getConfigPath(name)
+    return CONFIG_DIR .. "/" .. name .. ".json"
+end
+
+local function listConfigs()
+    local files = {}
+    pcall(function()
+        for _, f in ipairs(listfiles(CONFIG_DIR)) do
+            -- Extract name from path, strip .json
+            local name = f:match("([^/\\]+)%.json$")
+            if name then table.insert(files, name) end
+        end
+    end)
+    if #files == 0 then table.insert(files, "default") end
+    table.sort(files)
+    return files
+end
 
 local function readFlags()
     local config = {}
@@ -1809,143 +1838,122 @@ local function applyFlags(config)
     return loaded
 end
 
-local function toBase64(data)
-    local b64chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
-    local result = {}
-    local padding = (3 - #data % 3) % 3
-    data = data .. string.rep("\0", padding)
-    for i = 1, #data, 3 do
-        local a, b, c = data:byte(i, i+2)
-        local n = a * 65536 + b * 256 + c
-        table.insert(result, b64chars:sub(math.floor(n/262144)%64+1, math.floor(n/262144)%64+1))
-        table.insert(result, b64chars:sub(math.floor(n/4096)%64+1,   math.floor(n/4096)%64+1))
-        table.insert(result, b64chars:sub(math.floor(n/64)%64+1,     math.floor(n/64)%64+1))
-        table.insert(result, b64chars:sub(n%64+1,                    n%64+1))
-    end
-    local out = table.concat(result)
-    return out:sub(1, #out - padding) .. string.rep("=", padding)
+-- Config name input via a simple text label + button approach
+-- (Rayfield doesn't have text input, so we use a dropdown of existing + "default")
+local configNames    = listConfigs()
+local configDropdown = nil
+
+local function refreshConfigDropdown()
+    configNames = listConfigs()
+    -- Rayfield dropdown can't be updated dynamically, so notify user
+    notify("Config", "Reload script to see new config in dropdown")
 end
 
--- Fetch settings from GitHub and apply to all flags
-local function loadFromGitHub()
-    local ok, data = pcall(function()
-        return game:HttpGet(RAW_URL .. "?t=" .. tostring(os.time()))
-    end)
-    if not ok or not data or data == "" or data:find("404") then
-        return false, "No settings on GitHub yet -- push your settings first."
-    end
-    local config
-    local parseOk = pcall(function() config = HS:JSONDecode(data) end)
-    if not parseOk or not config then
-        return false, "Failed to parse settings from GitHub."
-    end
-    local loaded = applyFlags(config)
-    return true, loaded
-end
+-- Save input name — user types in chat or we use selected from dropdown
+local saveConfigName = "default"
 
--- Push current settings up to GitHub
-local function pushToGitHub()
-    if GITHUB_TOKEN == "YOUR_GITHUB_TOKEN_HERE" or GITHUB_TOKEN == "" then
-        return false, "No token set -- paste your GitHub token into the script first."
-    end
+ConfigTab:CreateLabel("── Save ──────────────────")
 
-    local config  = readFlags()
-    local encoded = HS:JSONEncode(config)
-
-    -- Get current file SHA (required by GitHub API to update an existing file)
-    local sha = nil
-    pcall(function()
-        local info = HS:RequestAsync({
-            Url     = API_URL,
-            Method  = "GET",
-            Headers = {
-                ["Authorization"] = "token " .. GITHUB_TOKEN,
-                ["User-Agent"]    = "YESHub",
-            }
-        })
-        if info and info.StatusCode == 200 then
-            local parsed = HS:JSONDecode(info.Body)
-            sha = parsed and parsed.sha
-        end
-    end)
-
-    local bodyTable = {
-        message = "Update settings from YESHub",
-        content = toBase64(encoded),
-    }
-    if sha then bodyTable.sha = sha end
-
-    local ok2, res = pcall(function()
-        return HS:RequestAsync({
-            Url     = API_URL,
-            Method  = "PUT",
-            Headers = {
-                ["Authorization"] = "token " .. GITHUB_TOKEN,
-                ["Content-Type"]  = "application/json",
-                ["User-Agent"]    = "YESHub",
-            },
-            Body = HS:JSONEncode(bodyTable),
-        })
-    end)
-
-    if not ok2 or not res then
-        return false, "Request failed -- check executor allows HttpRequest."
-    end
-    if res.StatusCode == 200 or res.StatusCode == 201 then
-        return true, "Pushed! All accounts sync these settings on next inject."
-    else
-        return false, "GitHub error " .. tostring(res.StatusCode)
-    end
-end
-
-ConfigTab:CreateLabel("-- GitHub Sync --")
-ConfigTab:CreateLabel("All accounts load the same settings from GitHub on inject")
-
-ConfigTab:CreateButton({
-    Name = "Push My Settings to GitHub",
-    Callback = function()
-        notify("Config", "Pushing settings to GitHub...")
-        task.spawn(function()
-            local ok, msg = pushToGitHub()
-            notify("Config", tostring(msg))
-            print("[Config] Push: " .. tostring(msg))
-        end)
+ConfigTab:CreateDropdown({
+    Name = "Config Slot Name",
+    Options = {"default", "hatch", "farm", "rebirth", "all"},
+    CurrentOption = {"default"},
+    MultipleOptions = false,
+    Flag = "ConfigSlotName",
+    Callback = function(opt)
+        saveConfigName = type(opt)=="table" and opt[1] or opt
+        selectedConfig = saveConfigName
     end,
 })
 
 ConfigTab:CreateButton({
-    Name = "Pull Settings from GitHub Now",
+    Name = "💾  Save Current Settings",
     Callback = function()
-        notify("Config", "Fetching from GitHub...")
-        task.spawn(function()
-            local ok, result = loadFromGitHub()
-            if ok then
-                notify("Config", "Synced " .. tostring(result) .. " settings from GitHub!")
-            else
-                notify("Config", tostring(result))
-            end
+        local config = readFlags()
+        local path   = getConfigPath(saveConfigName)
+        local ok, err = pcall(function()
+            writefile(path, HS:JSONEncode(config))
         end)
+        if ok then
+            notify("Config", "Saved as '" .. saveConfigName .. "'!")
+            print("[Config] Saved to " .. path)
+        else
+            notify("Config", "Save failed: " .. tostring(err))
+        end
+    end,
+})
+
+ConfigTab:CreateLabel("── Load ──────────────────")
+
+ConfigTab:CreateDropdown({
+    Name = "Select Config to Load",
+    Options = configNames,
+    CurrentOption = {configNames[1]},
+    MultipleOptions = false,
+    Flag = "ConfigToLoad",
+    Callback = function(opt)
+        selectedConfig = type(opt)=="table" and opt[1] or opt
+    end,
+})
+
+ConfigTab:CreateButton({
+    Name = "📂  Load Selected Config",
+    Callback = function()
+        local path = getConfigPath(selectedConfig)
+        local ok, data = pcall(readfile, path)
+        if not ok or not data or data == "" then
+            notify("Config", "Config '" .. selectedConfig .. "' not found.")
+            return
+        end
+        local config
+        local parseOk = pcall(function() config = HS:JSONDecode(data) end)
+        if not parseOk or not config then
+            notify("Config", "Failed to parse config.")
+            return
+        end
+        local loaded = applyFlags(config)
+        notify("Config", "Loaded '" .. selectedConfig .. "' — " .. loaded .. " settings applied")
+        print("[Config] Loaded " .. loaded .. " flags from " .. path)
+    end,
+})
+
+ConfigTab:CreateLabel("── Delete ────────────────")
+
+ConfigTab:CreateButton({
+    Name = "🗑️  Delete Selected Config",
+    Callback = function()
+        local path = getConfigPath(selectedConfig)
+        local ok = pcall(delfile, path)
+        if ok then
+            notify("Config", "Deleted '" .. selectedConfig .. "'")
+        else
+            notify("Config", "Could not delete '" .. selectedConfig .. "'")
+        end
     end,
 })
 
 ConfigTab:CreateDivider()
-ConfigTab:CreateLabel("Token lives in the script only -- never shared")
-ConfigTab:CreateLabel("Push once from one account -- all others sync on inject")
+ConfigTab:CreateLabel("Configs saved to: YESHub_Configs/<name>.json")
+ConfigTab:CreateLabel("Slots: default / hatch / farm / rebirth / all")
 
--- Auto-load from GitHub on every inject
+-- Auto-load 'default' config on startup
 task.spawn(function()
     task.wait(2)
-    local ok, result = loadFromGitHub()
-    if ok then
-        print("[Config] Auto-synced " .. tostring(result) .. " settings from GitHub")
-        if result > 0 then
-            notify("Config", "Settings synced from GitHub!")
+    local path = getConfigPath("default")
+    local ok, data = pcall(readfile, path)
+    if ok and data and data ~= "" then
+        local config
+        local parseOk = pcall(function() config = HS:JSONDecode(data) end)
+        if parseOk and config then
+            local loaded = applyFlags(config)
+            if loaded > 0 then
+                notify("Config", "Auto-loaded 'default' — " .. loaded .. " settings restored")
+            end
         end
-    else
-        print("[Config] GitHub sync: " .. tostring(result))
     end
 end)
 
+-- ══════════════════════════════════════════════════════════
 -- AUTO EQUIP BEST PETS — every 5 minutes, silently
 -- Remote: "equip best pets" InvokeServer({}) — confirmed Cobalt
 -- No toggle/button — just runs in background automatically
@@ -1968,7 +1976,45 @@ task.spawn(function()
     end
 end)
 
+
 -- ══════════════════════════════════════════════════════════
--- LOAD CONFIGURATION -- must be after ALL UI elements
+-- AUTO DISMISS POPUP — always runs in background
+-- Framework.GUI.Message.Gui IS PlayerGui.Message (the ScreenGui itself)
+-- Ok button found recursively inside it
+-- Uses GetPropertyChangedSignal for instant dismiss + polling backup
 -- ══════════════════════════════════════════════════════════
-Rayfield:LoadConfiguration()
+
+task.spawn(function()
+    local pg = lp:WaitForChild("PlayerGui")
+
+    -- Wait for Message ScreenGui — no .Gui child, Message IS the ScreenGui
+    local messageGui = pg:WaitForChild("Message", 30)
+    if not messageGui then
+        print("[AutoDismiss] Message ScreenGui not found — skipping")
+        return
+    end
+
+    local function tryDismiss()
+        pcall(function()
+            if not messageGui.Enabled then return end
+            -- Recursive search — Ok button may be nested at any depth
+            local okBtn = messageGui:FindFirstChild("Ok", true)
+            if okBtn and okBtn:IsA("GuiButton") and okBtn.Visible then
+                okBtn:Activate()
+            end
+        end)
+    end
+
+    -- Instant dismiss via property signal — fires the frame popup becomes visible
+    messageGui:GetPropertyChangedSignal("Enabled"):Connect(function()
+        if messageGui.Enabled then
+            tryDismiss()
+        end
+    end)
+
+    -- Polling backup every 0.1s in case signal fires before button is visible
+    while true do
+        tryDismiss()
+        task.wait(0.1)
+    end
+end)
